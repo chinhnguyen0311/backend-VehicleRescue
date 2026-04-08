@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.geo.Point;
+import org.locationtech.jts.geom.Point;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -38,7 +38,10 @@ public class RescueOrder {
 
     @Column(name = "mechanic_name", length = 255)
     private String mechanicName;
-
+    @Column(name="mechanic_id", columnDefinition = "uuid")
+    private UUID mechanicId;
+    @Column(name = "service_id", columnDefinition = "uuid")
+    private UUID serviceId;
     @Column(name = "completed_at")
     private OffsetDateTime completedAt;
 

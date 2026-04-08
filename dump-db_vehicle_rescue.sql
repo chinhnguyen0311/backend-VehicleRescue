@@ -8,9 +8,15 @@ CREATE TABLE accounts (
     username VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    refresh_token TEXT,
     role VARCHAR(50) NOT NULL,
     google_id VARCHAR(255),
     avatar_url VARCHAR(500),
+    last_active TIMESTAMP WITH TIME ZONE,
+    banned_at TIMESTAMP WITH TIME ZONE,
+    suspended_until TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT TRUE,
     email_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -46,10 +52,14 @@ CREATE TABLE mechanics (
     mechanic_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID UNIQUE NOT NULL, -- UNIQUE để đảm bảo quan hệ 1-1
     type VARCHAR(50) NOT NULL,
+    work_type VARCHAR(50) NOT NULL DEFAULT 'MOBILE',
     display_name VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20) NOT NULL,
     description TEXT,
     current_location GEOMETRY(Point, 4326), -- Tọa độ PostGIS (Kinh độ, Vĩ độ)
+    garage_name VARCHAR(255),                          -- Chỉ có khi work_type = GARAGE
+    garage_address VARCHAR(500),                       -- Chỉ có khi work_type = GARAGE
+    garage_location GEOMETRY(Point, 4326),
     status VARCHAR(50) DEFAULT 'OFFLINE',
     rating_score NUMERIC(3, 2) DEFAULT 0.00,
     total_reviews INTEGER DEFAULT 0,
@@ -111,3 +121,10 @@ CREATE TABLE reports (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_report_order FOREIGN KEY (order_id) REFERENCES rescue_orders(order_id) ON DELETE CASCADE
 );
+INSERT INTO services (name, icon_url, base_price) VALUES
+('Dịch Vụ Kéo Xe', NULL, 0.00),
+('Thay Lốp Xe', NULL, 0.00),
+('Nổ Máy', NULL, 0.00),
+('Giao Nhiên Liệu', NULL, 0.00),
+('Mở Khóa Xe', NULL, 0.00),
+('Sự Cố Cơ Khí', NULL, 0.00);

@@ -3,12 +3,13 @@ package com.Doantotnghiep.vehicle_rescue.rescue_management.entity;
 import com.Doantotnghiep.vehicle_rescue.authentication.entity.Account;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicType;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicWorkType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.geo.Point;
+import org.locationtech.jts.geom.Point;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -45,7 +46,16 @@ public class Mechanic {
 
     @Column(name = "current_location", columnDefinition = "GEOMETRY(Point, 4326)")
     private Point currentLocation;
+    @Column(name = "garage_name", length = 255)
+    private String garageName;
 
+    @Column(name = "garage_address", length = 500)
+    private String garageAddress;
+    @Column(name = "garage_location", columnDefinition = "GEOMETRY(Point, 4326)")
+    private Point garageLocation;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "work_type", length = 50, nullable = false)
+    private MechanicWorkType workType;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, columnDefinition = "VARCHAR(50) DEFAULT 'OFFLINE'")
     private MechanicStatus status;
