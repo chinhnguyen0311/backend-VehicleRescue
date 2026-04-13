@@ -4,6 +4,7 @@ import com.Doantotnghiep.vehicle_rescue.common.dto.ApiResponse;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.AddMechanicServiceRequestDTO;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateMechanicServiceRequestDTO;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateProfileRequestDTO;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.MechanicOrderItemResponse;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.MechanicServiceResponseDTO;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.ProfileResponseDTO;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.MechanicProfileService;
@@ -65,6 +66,54 @@ public class MechanicController {
                 .success(true)
                 .code(200)
                 .message("Cập nhật giá dịch vụ thành công")
+                .build();
+    }
+    @GetMapping("/requested-orders")
+    public ApiResponse<List<MechanicOrderItemResponse>> getRequestedOrders() {
+
+        return ApiResponse.<List<MechanicOrderItemResponse>>builder()
+                .success(true)
+                .code(200)
+                .data(mechanicService.getRequestedOrdersForMechanic())
+                .message("Lấy danh sách được yêu cầu hỗ trợ thành công")
+                .build();
+    }
+    @PutMapping("/order/{orderId}/accept")
+    public ApiResponse<Void> acceptOrder(@PathVariable UUID orderId) {
+        mechanicService.acceptOrder(orderId);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(200)
+                .message("Chấp nhận yêu cầu thành công")
+                .build();
+    }
+
+    @PutMapping("/order/{orderId}/cancel")
+    public ApiResponse<Void> cancelOrder(@PathVariable UUID orderId) {
+        mechanicService.cancelOrder(orderId);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(200)
+                .message("Từ chối yêu cầu thành công")
+                .build();
+    }
+    @PutMapping("/order/{orderId}/in-process")
+    public ApiResponse<Void> inProcessOrder(@PathVariable UUID orderId) {
+        mechanicService.inProcessOrder(orderId);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(200)
+                .message("Bắt đầu xử lý yêu cầu")
+                .build();
+    }
+
+    @PutMapping("/order/{orderId}/complete")
+    public ApiResponse<Void> completeOrder(@PathVariable UUID orderId) {
+        mechanicService.completeOrder(orderId);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(200)
+                .message("Hoàn thành yêu cầu thành công")
                 .build();
     }
 }

@@ -26,7 +26,9 @@ public enum ErrorCode {
 
     // Mechanic Service
     SERVICE_ALREADY_EXISTS(3001, "Dịch vụ đã được thêm trước đó", HttpStatus.CONFLICT),
-    SERVICE_NOT_FOUND(3002, "Dịch vụ không tồn tại", HttpStatus.NOT_FOUND);
+    SERVICE_NOT_FOUND(3002, "Dịch vụ không tồn tại", HttpStatus.NOT_FOUND),
+    ORDER_NOT_FOUND(4001, "Đơn hàng không tồn tại", HttpStatus.NOT_FOUND),
+    ORDER_INVALID_STATUS(4002, "Trạng thái đơn hàng không hợp lệ", HttpStatus.BAD_REQUEST);
     private final int code;
     private final String message;
     private final HttpStatus httpStatus;
