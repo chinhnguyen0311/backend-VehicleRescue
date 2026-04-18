@@ -91,6 +91,7 @@ public class MechanicProfileService {
         // Cập nhật Account
         account.setFullName(request.getFullName());
         account.setPhoneNumber(request.getPhoneNumber());
+        account.setEmail(request.getEmail());
         accountRepository.save(account);
 
         // Cập nhật Mechanic
@@ -405,7 +406,7 @@ public class MechanicProfileService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
 
         List<RescueOrder> orders =
-                rescueOrderRepository.findByMechanicIdOrderByCreatedAtDesc(mechanic.getMechanicId());
+                rescueOrderRepository.findCompletedOrdersByMechanic(mechanic.getMechanicId());
 
         return orders.stream().map(order -> {
             String serviceName = "Không xác định";

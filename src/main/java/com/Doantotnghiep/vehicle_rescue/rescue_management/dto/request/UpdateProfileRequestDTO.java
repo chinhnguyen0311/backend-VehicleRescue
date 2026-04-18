@@ -20,7 +20,7 @@ public class UpdateProfileRequestDTO {
 
     @NotBlank(message = "Số điện thoại không được để trống")
     private String phoneNumber;
-
+    private String email;
     @NotNull(message = "Loại phương tiện không được để trống")
     private MechanicType type;
 

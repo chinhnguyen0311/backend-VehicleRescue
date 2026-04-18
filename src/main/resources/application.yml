@@ -1,16 +1,13 @@
-server:
-  port: 8080
-  username-admin: admin
-  password-admin: admin
-
 spring:
   datasource:
     url: "jdbc:postgresql://localhost:5433/vehiclerescue_db"
     username: admin
     password: admin
     driver-class-name: "org.postgresql.Driver"
+
   application:
     name: vehiclerescue
+
   jpa:
     hibernate:
       ddl-auto: none
@@ -20,6 +17,19 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         use_sql_comments: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: nguyenduychinh204@gmail.com
+    password: djxtaieqbsaqlipl
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 vehicle-rescue:
   jwt:
     base64-secret: "VGhpcyBpcyBhIDY0IGJ5dGUgc2VjcmV0IGtleSBmb3IgSFM1MTIgYWxnb3JpdGhtIGZvciBWZWhpY2xlIFJlc2N1ZSBKV1QgVG9rZW4h"

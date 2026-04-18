@@ -50,4 +50,35 @@ public interface MechanicRepository extends JpaRepository<Mechanic, UUID> {
             @Param("longitude") Double longitude,
             @Param("serviceId") UUID serviceId);
 
+    @Query(value = """
+SELECT 
+    m.mechanic_id,
+    a.full_name,
+    a.phone_number,
+    a.email,
+    COALESCE(AVG(r.rating), 0) AS avg_rating,
+    COUNT(DISTINCT CASE WHEN o.status = 'COMPLETED' THEN o.order_id END) AS total_completed,
+    a.created_at,
+    m.subs_end_date,
+    a.is_active,
+    m.work_type,
+    CASE WHEN m.work_type = 'GARAGE' THEN m.garage_name ELSE NULL END AS garage_name,
+    CASE WHEN m.work_type = 'GARAGE' THEN m.garage_address ELSE NULL END AS garage_address
+FROM mechanics m
+JOIN accounts a ON m.account_id = a.account_id
+LEFT JOIN rescue_orders o ON o.mechanic_id = m.mechanic_id
+LEFT JOIN reviews r ON r.order_id = o.order_id
+GROUP BY 
+    m.mechanic_id,
+    a.full_name,
+    a.phone_number,
+    a.email,
+    a.created_at,
+    m.subs_end_date,
+    a.is_active,
+    m.work_type,
+    m.garage_name,
+    m.garage_address
+""", nativeQuery = true)
+    List<Object[]> getAllMechanicStats();
 }

@@ -12,6 +12,7 @@ import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicSer
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.RescueOrderRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.ServiceRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.map.DistanceService;
+import com.Doantotnghiep.vehicle_rescue.system.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -37,6 +38,7 @@ public class RescueOrderService {
     private final DistanceService distanceService;
     private final RescueOrderMapper rescueOrderMapper;
     private final ServiceRepository serviceRepository;
+        private final EmailService emailService;
     public List<ServiceResponseDTO> getAllServices() {
         return serviceRepository.findAll().stream()
                 .map(s -> ServiceResponseDTO.builder()
@@ -164,7 +166,10 @@ public class RescueOrderService {
         String mechanicName = mechanic.getWorkType().name().equals("GARAGE")
                 ? mechanic.getGarageName()
                 : mechanic.getDisplayName();
-
+        String mechanicPhone = mechanic.getAccount().getPhoneNumber();
+        if (request.getCustomerPhone().equals(mechanicPhone)) {
+            throw new RuntimeException("Số điện thoại khách hàng không được trùng với thợ sửa");
+        }
         RescueOrder order = RescueOrder.builder()
                 .customerName(request.getCustomerName())
                 .customerPhone(request.getCustomerPhone())
@@ -175,9 +180,19 @@ public class RescueOrderService {
                 .mechanicName(mechanicName)
                 .status(OrderStatus.REQUESTED)
                 .build();
-
         RescueOrder saved = rescueOrderRepository.save(order);
-
+        String serviceName = null;
+        if (order.getServiceId() != null) {
+            serviceName = serviceRepository.findById(request.getServiceId())
+                    .map(service -> service.getName())
+                    .orElse(null);
+        }
+        emailService.sendNewOrderNotification(
+                mechanic.getAccount().getEmail(),
+                order.getCustomerName(),
+                order.getCustomerAddress(),
+                serviceName
+        );
         // 🔥 convert sang response bằng mapper
         return rescueOrderMapper.toResponse(saved);
     }

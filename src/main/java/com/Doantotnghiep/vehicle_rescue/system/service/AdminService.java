@@ -1,0 +1,188 @@
+package com.Doantotnghiep.vehicle_rescue.system.service;
+
+import com.Doantotnghiep.vehicle_rescue.interation.entity.Review;
+import com.Doantotnghiep.vehicle_rescue.interation.repository.ReviewRepository;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.RescueOrder;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.OrderStatus;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.RescueOrderRepository;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.ServiceRepository;
+import com.Doantotnghiep.vehicle_rescue.system.dto.response.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class AdminService {
+    private final RescueOrderRepository rescueOrderRepository;
+    private final MechanicRepository mechanicRepository;
+    private final ServiceRepository serviceRepository;
+    private final ReviewRepository reviewRepository;
+    public AdminDashboardResponse getDashboard() {
+
+        long totalCompleted = rescueOrderRepository.countByStatus(OrderStatus.COMPLETED);
+
+        long totalRequested = rescueOrderRepository.count(); // hoặc count theo status != CANCEL
+
+        long totalMechanics = mechanicRepository.count();
+
+        double avgPerMonth = calculateAvgOrdersPerMonth();
+
+        List<MonthlyStats> monthlyStats = getMonthlyStats();
+
+        List<ServiceStats> serviceRanking = getServiceRanking();
+
+        List<MechanicStats> topMechanics = getTop5Mechanics();
+
+        return AdminDashboardResponse.builder()
+                .totalCompletedOrders(totalCompleted)
+                .totalRequestedOrders(totalRequested)
+                .totalMechanics(totalMechanics)
+                .avgOrdersPerMonth(avgPerMonth)
+                .monthlyStats(monthlyStats)
+                .serviceRanking(serviceRanking)
+                .topMechanics(topMechanics)
+                .build();
+    }
+    private double calculateAvgOrdersPerMonth() {
+        List<RescueOrder> orders = rescueOrderRepository.findAll();
+
+        if (orders.isEmpty()) return 0;
+
+        LocalDate first = orders.stream()
+                .map(o -> o.getCreatedAt().toLocalDate())
+                .min(LocalDate::compareTo)
+                .get();
+
+        LocalDate now = LocalDate.now();
+
+        long months = ChronoUnit.MONTHS.between(first, now) + 1;
+
+        return (double) orders.size() / months;
+    }
+    private List<MonthlyStats> getMonthlyStats() {
+
+        Map<String, List<RescueOrder>> grouped = rescueOrderRepository.findAll()
+                .stream()
+                .collect(Collectors.groupingBy(o ->
+                        o.getCreatedAt().getYear() + "-" +
+                                String.format("%02d", o.getCreatedAt().getMonthValue())
+                ));
+
+        List<MonthlyStats> result = new ArrayList<>();
+
+        for (String month : grouped.keySet()) {
+
+            List<RescueOrder> orders = grouped.get(month);
+
+            long completed = orders.stream()
+                    .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                    .count();
+
+            result.add(MonthlyStats.builder()
+                    .month(month)
+                    .completed(completed)
+                    .requested(orders.size())
+                    .build());
+        }
+
+        return result.stream()
+                .sorted(Comparator.comparing(MonthlyStats::getMonth))
+                .toList();
+    }
+    private List<ServiceStats> getServiceRanking() {
+
+        Map<String, Long> map = rescueOrderRepository.findAll()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        o -> {
+                            if (o.getServiceId() == null) return "Không xác định";
+
+                            String name = serviceRepository.getServiceName(o.getServiceId());
+                            return name != null ? name : "Không xác định";
+                        },
+                        Collectors.counting()
+                ));
+
+        return map.entrySet().stream()
+                .map(e -> ServiceStats.builder()
+                        .serviceName(e.getKey())
+                        .totalRequests(e.getValue())
+                        .build())
+                .sorted((a, b) -> Long.compare(b.getTotalRequests(), a.getTotalRequests()))
+                .toList();
+    }
+    private List<MechanicStats> getTop5Mechanics() {
+
+        List<Mechanic> mechanics = mechanicRepository.findAll();
+
+        return mechanics.stream()
+                .map(m -> {
+
+                    List<RescueOrder> orders =
+                            rescueOrderRepository.findByMechanicIdAndStatus(
+                                    m.getMechanicId(), OrderStatus.COMPLETED);
+
+                    long totalCompleted = orders.size();
+
+                    double avgRating = orders.stream()
+                            .map(order -> reviewRepository.findByOrderId(order.getOrderId())
+                                    .map(Review::getRating)
+                                    .orElse(null))
+                            .filter(Objects::nonNull)
+                            .mapToInt(Integer::intValue)
+                            .average()
+                            .orElse(0);
+
+                    return MechanicStats.builder()
+                            .mechanicName(m.getAccount().getFullName())
+                            .avgRating(avgRating)
+                            .totalCompleted(totalCompleted)
+                            .build();
+                })
+                .sorted((a, b) -> {
+                    int cmp = Double.compare(b.getAvgRating(), a.getAvgRating());
+                    if (cmp == 0) {
+                        return Long.compare(b.getTotalCompleted(), a.getTotalCompleted());
+                    }
+                    return cmp;
+                })
+                .limit(5)
+                .toList();
+    }
+    public List<MechanicAdminResponse> getAllMechanicsForAdmin() {
+        return mechanicRepository.getAllMechanicStats()
+                .stream()
+                .map(row -> MechanicAdminResponse.builder()
+                        .mechanicId((UUID) row[0])
+                        .mechanicName((String) row[1])
+                        .mechanicPhone((String) row[2])
+                        .mechanicEmail((String) row[3])
+                        .avgRating(row[4] != null ? ((Number) row[4]).doubleValue() : 0.0)
+                        .totalCompleted(row[5] != null ? ((Number) row[5]).longValue() : 0L)
+                        .createdAt(toLocalDateTime(row[6]))
+                        .expiredAt(toLocalDateTime(row[7]))
+                        .isActive((Boolean) row[8])
+                        .workType((String) row[9])
+                        .garageName((String) row[10])
+                        .garageAddress((String) row[11])
+                        .build()
+                )
+                .toList();
+    }
+    private LocalDateTime toLocalDateTime(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof java.sql.Timestamp ts) return ts.toLocalDateTime();
+        if (obj instanceof LocalDateTime ldt) return ldt;
+        return null;
+    }
+}

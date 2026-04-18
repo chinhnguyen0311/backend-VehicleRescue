@@ -19,7 +19,14 @@ public interface RescueOrderRepository extends JpaRepository<RescueOrder, UUID> 
     Optional<RescueOrder> findFirstByMechanicIdAndStatusIn(UUID mechanicId, List<OrderStatus> statuses);
     @Query("SELECT r FROM RescueOrder r WHERE r.mechanicId = :mechanicId AND r.status = 'REQUESTED'")
     List<RescueOrder> findRequestedByMechanicId(UUID mechanicId);
-    List<RescueOrder> findByMechanicIdOrderByCreatedAtDesc(UUID mechanicId);
+    long countByStatus(OrderStatus status);
+    @Query("""
+SELECT o FROM RescueOrder o
+WHERE o.mechanicId = :mechanicId
+AND o.status = 'COMPLETED'
+ORDER BY o.createdAt DESC
+""")
+    List<RescueOrder> findCompletedOrdersByMechanic(UUID mechanicId);
     @Query("""
 SELECT r FROM RescueOrder r
 WHERE r.customerPhone = :phone
