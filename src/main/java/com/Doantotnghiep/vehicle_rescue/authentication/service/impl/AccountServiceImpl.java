@@ -10,6 +10,7 @@ import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicWorkType;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.service.map.DistanceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -37,7 +38,7 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
     private final MechanicRepository mechanicRepository;
-
+    private final DistanceService distanceService;
     private static final GeometryFactory GEOMETRY_FACTORY =
             new GeometryFactory(new PrecisionModel(), 4326);
     @Override
@@ -79,9 +80,17 @@ public class AccountServiceImpl implements AccountService {
 
         // Nếu là GARAGE thì set thêm thông tin garage
         if (request.getWorkType() == MechanicWorkType.GARAGE) {
+
+            double[] coords = distanceService.getCoordinatesFromAddress(request.getGarageAddress());
+
+            if (coords == null) {
+                throw new CustomException(ErrorCode.INVALID_ADDRESS, "Không tìm được tọa độ từ địa chỉ");
+            }
+
             Point garageLocation = GEOMETRY_FACTORY.createPoint(
-                    new Coordinate(request.getGarageLongitude(), request.getGarageLatitude())
+                    new Coordinate(coords[1], coords[0]) // lng, lat
             );
+
             mechanicBuilder
                     .garageName(request.getGarageName())
                     .garageAddress(request.getGarageAddress())

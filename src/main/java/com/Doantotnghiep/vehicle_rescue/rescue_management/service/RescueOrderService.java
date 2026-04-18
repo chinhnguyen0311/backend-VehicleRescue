@@ -1,16 +1,16 @@
 package com.Doantotnghiep.vehicle_rescue.rescue_management.service;
 
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.CreateRescueOrderRequest;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.MechanicSearchResultDTO;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.SearchMechanicRequestDTO;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.MechanicServiceResponseDTO;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.RescueOrderResponse;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.RescueOrder;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.OrderStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.mapper.RescueOrderMapper;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicServiceRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.RescueOrderRepository;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.ServiceRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.map.DistanceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +19,7 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -35,6 +36,15 @@ public class RescueOrderService {
             new GeometryFactory(new PrecisionModel(), 4326);
     private final DistanceService distanceService;
     private final RescueOrderMapper rescueOrderMapper;
+    private final ServiceRepository serviceRepository;
+    public List<ServiceResponseDTO> getAllServices() {
+        return serviceRepository.findAll().stream()
+                .map(s -> ServiceResponseDTO.builder()
+                        .serviceId(s.getServiceId())
+                        .name(s.getName())
+                        .build()
+                ).toList();
+    }
     public List<MechanicSearchResultDTO> searchNearbyMechanics(SearchMechanicRequestDTO request) {
         List<Object[]> results = mechanicRepository.findNearbyMechanics(
                 request.getLatitude(),
@@ -143,6 +153,10 @@ public class RescueOrderService {
                         request.getLatitude()
                 )
         );
+        String address = distanceService.getAddress(
+                request.getLatitude(),
+                request.getLongitude()
+        );
 
         var mechanic = mechanicRepository.findById(request.getMechanicId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thợ"));
@@ -155,6 +169,7 @@ public class RescueOrderService {
                 .customerName(request.getCustomerName())
                 .customerPhone(request.getCustomerPhone())
                 .customerLocation(point)
+                .customerAddress(address)
                 .serviceId(request.getServiceId())
                 .mechanicId(mechanic.getMechanicId())
                 .mechanicName(mechanicName)
@@ -165,5 +180,47 @@ public class RescueOrderService {
 
         // 🔥 convert sang response bằng mapper
         return rescueOrderMapper.toResponse(saved);
+    }
+    public List<CustomerOrderResponse> getMyOrders(String phone) {
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay().atOffset(now.getOffset());
+        OffsetDateTime endOfDay = startOfDay.plusDays(1);
+        List<RescueOrder> orders = rescueOrderRepository.findActiveByPhoneToday(phone,startOfDay, endOfDay);
+
+        return orders.stream().map(order -> {
+
+            // mechanic
+            Mechanic mechanic = null;
+            if (order.getMechanicId() != null) {
+                mechanic = mechanicRepository.findById(order.getMechanicId()).orElse(null);
+            }
+
+            // service
+            String serviceName = null;
+            if (order.getServiceId() != null) {
+                serviceName = serviceRepository.findById(order.getServiceId())
+                        .map(service -> service.getName())
+                        .orElse(null);
+            }
+
+            return CustomerOrderResponse.builder()
+                    .orderId(order.getOrderId().toString())
+                    .customerName(order.getCustomerName())
+                    .customerPhone(order.getCustomerPhone())
+                    .mechanicName(
+                            mechanic != null
+                                    ? (mechanic.getWorkType().name().equals("GARAGE")
+                                    ? mechanic.getGarageName()
+                                    : mechanic.getDisplayName())
+                                    : null
+                    )
+                    .mechanicPhone(mechanic != null ? mechanic.getPhoneNumber() : null)
+                    .serviceName(serviceName)
+                    .status(order.getStatus().name())
+                    .createdAt(order.getCreatedAt())
+                    .build();
+
+        }).toList();
+
     }
 }

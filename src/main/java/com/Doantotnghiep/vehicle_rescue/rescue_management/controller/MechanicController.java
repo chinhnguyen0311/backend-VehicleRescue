@@ -4,9 +4,7 @@ import com.Doantotnghiep.vehicle_rescue.common.dto.ApiResponse;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.AddMechanicServiceRequestDTO;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateMechanicServiceRequestDTO;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateProfileRequestDTO;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.MechanicOrderItemResponse;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.MechanicServiceResponseDTO;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.ProfileResponseDTO;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.MechanicProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -114,6 +112,45 @@ public class MechanicController {
                 .success(true)
                 .code(200)
                 .message("Hoàn thành yêu cầu thành công")
+                .build();
+    }
+    @GetMapping("/current-order")
+    public ApiResponse<MechanicOrderItemResponse> getCurrentOrder() {
+        return ApiResponse.<MechanicOrderItemResponse>builder()
+                .success(true)
+                .code(200)
+                .message("Lấy yêu cầu hiện tại thành công")
+                .data(mechanicService.getCurrentOrder())
+                .build();
+    }
+    @GetMapping("/order-history")
+    public ApiResponse<List<MechanicOrderHistoryResponse>> getOrderHistory() {
+        return ApiResponse.<List<MechanicOrderHistoryResponse>>builder()
+                .success(true)
+                .code(200)
+                .message("Lấy lịch sử đơn thành công")
+                .data(mechanicService.getOrderHistory())
+                .build();
+    }
+    @GetMapping("/statistic")
+    public ApiResponse<MechanicStatisticResponse> getStatistic() {
+
+        return ApiResponse.<MechanicStatisticResponse>builder()
+                .success(true)
+                .code(200)
+                .message("Lấy thống kê thành công")
+                .data(mechanicService.getStatistic())
+                .build();
+    }
+    @GetMapping("/detail/{mechanicId}")
+    public ApiResponse<MechanicDetailResponse> getMechanicDetail(
+            @PathVariable UUID mechanicId) {
+
+        return ApiResponse.<MechanicDetailResponse>builder()
+                .success(true)
+                .code(200)
+                .message("Lấy chi tiết thợ sửa thành công")
+                .data(mechanicService.getMechanicDetail(mechanicId))
                 .build();
     }
 }

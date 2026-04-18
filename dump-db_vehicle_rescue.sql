@@ -84,6 +84,7 @@ CREATE TABLE rescue_orders (
     customer_name VARCHAR(255) NOT NULL,
     customer_phone VARCHAR(20) NOT NULL,
     customer_location GEOMETRY(Point, 4326) NOT NULL, -- Tọa độ khách hàng
+    customer_address TEXT,
     mechanic_id UUID,
     service_id UUID,
     status VARCHAR(50) DEFAULT 'REQUESTED',

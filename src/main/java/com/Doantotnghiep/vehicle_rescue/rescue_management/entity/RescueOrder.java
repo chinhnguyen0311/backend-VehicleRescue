@@ -31,7 +31,8 @@ public class RescueOrder {
 
     @Column(name = "customer_location", columnDefinition = "GEOMETRY(Point, 4326)", nullable = false)
     private Point customerLocation;
-
+    @Column(name = "customer_address")
+    private String customerAddress;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, columnDefinition = "VARCHAR(50) DEFAULT 'REQUESTED'")
     private OrderStatus status;

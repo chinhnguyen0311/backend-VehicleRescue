@@ -38,7 +38,5 @@ public class RegisterRequest {
     private MechanicWorkType workType;
     private String garageName;
     private String garageAddress;
-    private Double garageLatitude;
-    private Double garageLongitude;
 }
 

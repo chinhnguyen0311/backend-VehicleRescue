@@ -13,6 +13,7 @@ import java.util.UUID;
 @Repository
 public interface MechanicRepository extends JpaRepository<Mechanic, UUID> {
     boolean existsByAccount(Account account);
+    List<Mechanic> findAll();
     Optional<Mechanic> findByAccount(Account account);
     @Query(value = """
     SELECT m.mechanic_id,

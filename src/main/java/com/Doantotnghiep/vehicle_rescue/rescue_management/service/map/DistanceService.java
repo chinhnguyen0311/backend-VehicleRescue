@@ -8,6 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -134,5 +137,49 @@ public class DistanceService {
         }
 
         return String.join(", ", uniqueParts);
+    }
+    public double[] getCoordinatesFromAddress(String address) {
+        try {
+            String geoAddress = normalizeForGeocode(address);
+
+            String url = "https://api.openrouteservice.org/geocode/search?api_key="
+                    + API_KEY
+                    + "&text=" + URLEncoder.encode(geoAddress, StandardCharsets.UTF_8)
+                    + "&size=1"
+                    + "&boundary.country=VN";
+
+            RestTemplate restTemplate = new RestTemplate();
+            Map response = restTemplate.getForObject(url, Map.class);
+
+            var features = (List<Map>) response.get("features");
+            if (features == null || features.isEmpty()) return null;
+
+            var geometry = (Map) features.get(0).get("geometry");
+            var coordinates = (List<Double>) geometry.get("coordinates");
+
+            return new double[]{coordinates.get(1), coordinates.get(0)};
+
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    private String normalizeForGeocode(String address) {
+        if (address == null) return null;
+
+        address = removeAccent(address);
+
+        return address
+                .replace("pho", "")
+                .replace("duong", "")
+                .replace("ngo", "")
+                .replace("ngach", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+    private String removeAccent(String input) {
+        if (input == null) return null;
+
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 }
