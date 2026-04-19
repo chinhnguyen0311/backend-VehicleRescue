@@ -1,6 +1,7 @@
 package com.Doantotnghiep.vehicle_rescue.authentication.entity;
 
 import com.Doantotnghiep.vehicle_rescue.authentication.enums.AccountRole;
+import com.Doantotnghiep.vehicle_rescue.authentication.enums.AccountStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -55,7 +56,8 @@ public class Account {
     @Column(name = "email_verified")
     @Builder.Default
     private Boolean emailVerified = false;
-
+    @Enumerated(EnumType.STRING)
+    private AccountStatus status;
     @Column(name = "banned_at")
     private LocalDateTime bannedAt;
 

@@ -2,6 +2,7 @@ package com.Doantotnghiep.vehicle_rescue.rescue_management.controller;
 
 import com.Doantotnghiep.vehicle_rescue.common.dto.ApiResponse;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.AddMechanicServiceRequestDTO;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.RenewalRequest;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateMechanicServiceRequestDTO;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateProfileRequestDTO;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.*;
@@ -151,6 +152,15 @@ public class MechanicController {
                 .code(200)
                 .message("Lấy chi tiết thợ sửa thành công")
                 .data(mechanicService.getMechanicDetail(mechanicId))
+                .build();
+    }
+    @PostMapping("/subscription")
+    public ApiResponse<Void> subscribe(RenewalRequest request) {
+        mechanicService.requestRenewal(request);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(200)
+                .message("Gửi yêu cầu gia hạn thành công")
                 .build();
     }
 }

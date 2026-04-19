@@ -1,11 +1,20 @@
 package com.Doantotnghiep.vehicle_rescue.system.service;
 
+import com.Doantotnghiep.vehicle_rescue.authentication.entity.Account;
+import com.Doantotnghiep.vehicle_rescue.authentication.enums.AccountStatus;
+import com.Doantotnghiep.vehicle_rescue.authentication.repository.AccountRepository;
+import com.Doantotnghiep.vehicle_rescue.common.exception.CustomException;
+import com.Doantotnghiep.vehicle_rescue.common.exception.ErrorCode;
 import com.Doantotnghiep.vehicle_rescue.interation.entity.Review;
 import com.Doantotnghiep.vehicle_rescue.interation.repository.ReviewRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.MechanicSubscription;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.RescueOrder;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.OrderStatus;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.SubscriptionStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicSubscriptionRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.RescueOrderRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.ServiceRepository;
 import com.Doantotnghiep.vehicle_rescue.system.dto.response.*;
@@ -15,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,6 +37,8 @@ public class AdminService {
     private final MechanicRepository mechanicRepository;
     private final ServiceRepository serviceRepository;
     private final ReviewRepository reviewRepository;
+    private final AccountRepository accountRepository;
+    private final MechanicSubscriptionRepository subscriptionRepository;
     public AdminDashboardResponse getDashboard() {
 
         long totalCompleted = rescueOrderRepository.countByStatus(OrderStatus.COMPLETED);
@@ -178,6 +190,78 @@ public class AdminService {
                         .build()
                 )
                 .toList();
+    }
+    public List<PendingAccountResponse> getPendingAccounts() {
+        return accountRepository.getPendingAccounts(AccountStatus.PENDING);
+    }
+
+    public void approveAccount(UUID accountId) {
+
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        if (account.getStatus() != AccountStatus.PENDING) {
+            throw new RuntimeException("Tài khoản không ở trạng thái PENDING");
+        }
+
+        account.setIsActive(true);
+        account.setStatus(AccountStatus.ACTIVE);
+        accountRepository.save(account);
+
+        Mechanic mechanic = mechanicRepository.findByAccount(account)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        mechanic.setIsActiveSubs(true);
+        mechanic.setSubsEndDate(OffsetDateTime.now().plusDays(30));
+        mechanic.setStatus(MechanicStatus.OFFLINE);
+
+        mechanicRepository.save(mechanic);
+    }
+
+    public void rejectAccount(UUID accountId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        if (account.getStatus() != AccountStatus.PENDING) {
+            throw new RuntimeException("Chỉ được xoá account PENDING");
+        }
+
+        accountRepository.delete(account);
+    }
+
+    public List<SubscriptionResponse> getPendingSubscriptions() {
+        return subscriptionRepository.getAllSubscriptions(SubscriptionStatus.PENDING);
+    }
+    public void approveSubscription(UUID subscriptionId) {
+        MechanicSubscription sub = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+        if (sub.getStatus() != SubscriptionStatus.PENDING) {
+            throw new CustomException(ErrorCode.SUBSCRIPTION_INVALID_STATUS);
+        }
+
+        Mechanic mechanic = sub.getMechanic();
+
+        mechanic.setSubsEndDate(sub.getNewEndDate());
+        mechanic.setIsActiveSubs(true);
+
+        sub.setStatus(SubscriptionStatus.APPROVED);
+
+        mechanicRepository.save(mechanic);
+        subscriptionRepository.save(sub);
+    }
+    public void rejectSubscription(UUID subscriptionId) {
+
+        MechanicSubscription sub = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+        if (sub.getStatus() != SubscriptionStatus.PENDING) {
+            throw new CustomException(ErrorCode.SUBSCRIPTION_INVALID_STATUS);
+        }
+        Mechanic mechanic = sub.getMechanic();
+        mechanic.setIsActiveSubs(false);
+        sub.setStatus(SubscriptionStatus.REJECTED);
+        subscriptionRepository.save(sub);
     }
     private LocalDateTime toLocalDateTime(Object obj) {
         if (obj == null) return null;

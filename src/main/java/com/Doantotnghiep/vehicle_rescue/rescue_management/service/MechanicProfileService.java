@@ -8,22 +8,15 @@ import com.Doantotnghiep.vehicle_rescue.common.exception.ErrorCode;
 import com.Doantotnghiep.vehicle_rescue.interation.dto.response.MechanicRankingDTO;
 import com.Doantotnghiep.vehicle_rescue.interation.entity.Review;
 import com.Doantotnghiep.vehicle_rescue.interation.repository.ReviewRepository;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.AddMechanicServiceRequestDTO;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.LocationMessage;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateMechanicServiceRequestDTO;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateProfileRequestDTO;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.*;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.MechanicService;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.MechanicServiceId;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.RescueOrder;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicWorkType;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.OrderStatus;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicServiceRepository;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.RescueOrderRepository;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.ServiceRepository;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.SubscriptionStatus;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.map.DistanceService;
+import com.Doantotnghiep.vehicle_rescue.system.service.SmsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -53,6 +46,8 @@ public class MechanicProfileService {
     private final RescueOrderRepository rescueOrderRepository;
     private final ReviewRepository reviewRepository;
     private final ServiceRepository serviceRepository;
+    private final MechanicSubscriptionRepository subscriptionRepository;
+    private final SmsService smsService;
     public ProfileResponseDTO getProfile() {
         String username = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
@@ -254,6 +249,23 @@ public class MechanicProfileService {
         }
 
         order.setStatus(OrderStatus.ACCEPTED);
+        if (mechanic.getWorkType() == MechanicWorkType.MOBILE) {
+            smsService.sendSms(
+                    order.getCustomerPhone(),
+                    "Tho da nhan yeu cau! "
+                            + "Tho: " + mechanic.getDisplayName() + ". "
+                            + ". SDT: " + mechanic.getPhoneNumber()
+                            + ". Vui long cho."
+            );
+        } else {
+            smsService.sendSms(
+                    order.getCustomerPhone(),
+                    "Tho da nhan yeu cau! "
+                            + "Gara: " + mechanic.getGarageName() + ". "
+                            + "Dia chi: " + mechanic.getGarageAddress() + ". "
+                            + "Vui long cho trong giay lat."
+            );
+        }
         rescueOrderRepository.save(order);
     }
 
@@ -609,6 +621,39 @@ public class MechanicProfileService {
                 .address(address)
                 .build();
     }
+    public void requestRenewal(RenewalRequest request) {
+        String username = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
+
+        Account account = accountRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        Mechanic mechanic = mechanicRepository.findByAccount(account)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime currentEnd = mechanic.getSubsEndDate();
+
+        OffsetDateTime newEnd;
+
+        if (currentEnd == null || currentEnd.isBefore(now)) {
+
+            newEnd = now.plusDays(30);
+        } else {
+
+            newEnd = currentEnd.plusDays(30);
+        }
+
+        MechanicSubscription sub = MechanicSubscription.builder()
+                .mechanic(mechanic)
+                .currentEndDate(currentEnd)
+                .newEndDate(newEnd)
+                .renewalDate(now)
+                .billImageUrl(request.getBillImageUrl())
+                .status(SubscriptionStatus.PENDING)
+                .build();
+        subscriptionRepository.save(sub);
+    }
     private Double extractLat(Object pointObj) {
         if (pointObj == null) return null;
 
@@ -636,5 +681,4 @@ public class MechanicProfileService {
 
         return null;
     }
-
 }

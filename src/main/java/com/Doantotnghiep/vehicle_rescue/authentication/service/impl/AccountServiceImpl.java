@@ -2,6 +2,7 @@ package com.Doantotnghiep.vehicle_rescue.authentication.service.impl;
 
 import com.Doantotnghiep.vehicle_rescue.authentication.dto.request.RegisterRequest;
 import com.Doantotnghiep.vehicle_rescue.authentication.entity.Account;
+import com.Doantotnghiep.vehicle_rescue.authentication.enums.AccountStatus;
 import com.Doantotnghiep.vehicle_rescue.authentication.repository.AccountRepository;
 import com.Doantotnghiep.vehicle_rescue.authentication.service.AccountService;
 import com.Doantotnghiep.vehicle_rescue.common.exception.CustomException;
@@ -61,8 +62,9 @@ public class AccountServiceImpl implements AccountService {
                 .email(request.getEmail())
                 .fullName(request.getFullName())
                 .phoneNumber(request.getPhoneNumber())
-                .isActive(true)
+                .isActive(false)
                 .emailVerified(false)
+                .status(AccountStatus.PENDING)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .lastActive(LocalDateTime.now())
@@ -75,8 +77,7 @@ public class AccountServiceImpl implements AccountService {
                 .displayName(request.getFullName())
                 .phoneNumber(request.getPhoneNumber())
                 .status(MechanicStatus.OFFLINE)
-                .isActiveSubs(true)
-                .subsEndDate(OffsetDateTime.now().plusDays(30));
+                ;
 
         // Nếu là GARAGE thì set thêm thông tin garage
         if (request.getWorkType() == MechanicWorkType.GARAGE) {
@@ -98,7 +99,7 @@ public class AccountServiceImpl implements AccountService {
         }
         mechanicRepository.save(mechanicBuilder.build());
         log.info("Account registered successfully: {}", request.getUsername());
-        return "Đăng ký thành công!";
+        return "Đăng ký thành công! Vui lòng chờ admin duyệt.";
     }
 
     @Override

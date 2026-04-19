@@ -19,6 +19,7 @@ CREATE TABLE accounts (
     suspended_until TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT TRUE,
     email_verified BOOLEAN DEFAULT FALSE,
+    status VARCHAR(50) DEFAULT 'PENDING',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -121,6 +122,20 @@ CREATE TABLE reports (
     admin_note TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_report_order FOREIGN KEY (order_id) REFERENCES rescue_orders(order_id) ON DELETE CASCADE
+);
+CREATE TABLE mechanic_subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    mechanic_id UUID NOT NULL,
+    current_end_date TIMESTAMP,   -- ngày hết hạn hiện tại
+    new_end_date TIMESTAMP,       -- ngày hết hạn sau khi gia hạn
+    renewal_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    bill_image_url VARCHAR(500),  -- ảnh bill (Firebase URL)
+    status VARCHAR(20) DEFAULT 'PENDING',
+
+    CONSTRAINT fk_subscription_mechanic
+        FOREIGN KEY (mechanic_id)
+        REFERENCES mechanics(mechanic_id)
+        ON DELETE CASCADE
 );
 INSERT INTO services (name, icon_url, base_price) VALUES
 ('Dịch Vụ Kéo Xe', NULL, 0.00),
