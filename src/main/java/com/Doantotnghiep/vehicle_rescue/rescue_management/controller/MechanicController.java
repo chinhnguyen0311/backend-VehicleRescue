@@ -9,7 +9,9 @@ import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.MechanicProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,9 +31,11 @@ public class MechanicController {
                 .data(profile)
                 .build();
     }
-    @PutMapping("/profile")
-    public ApiResponse<ProfileResponseDTO> updateProfile(@Valid @RequestBody UpdateProfileRequestDTO request) {
-        ProfileResponseDTO profile = mechanicService.updateProfile(request);
+    @PutMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ProfileResponseDTO> updateProfile(
+            @ModelAttribute @Valid UpdateProfileRequestDTO request,
+            @RequestPart(value = "file", required = false) MultipartFile fileImage) {
+        ProfileResponseDTO profile = mechanicService.updateProfile(request, fileImage);
         return ApiResponse.<ProfileResponseDTO>builder()
                 .success(true)
                 .code(200)
@@ -155,8 +159,8 @@ public class MechanicController {
                 .build();
     }
     @PostMapping("/subscription")
-    public ApiResponse<Void> subscribe(RenewalRequest request) {
-        mechanicService.requestRenewal(request);
+    public ApiResponse<Void> subscribe(@RequestPart("file") MultipartFile fileImage) {
+        mechanicService.requestRenewal(fileImage);
         return ApiResponse.<Void>builder()
                 .success(true)
                 .code(200)

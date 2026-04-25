@@ -11,11 +11,13 @@ import com.Doantotnghiep.vehicle_rescue.interation.repository.ReviewRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.*;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicWorkType;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.OrderStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.SubscriptionStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.map.DistanceService;
+import com.Doantotnghiep.vehicle_rescue.system.service.FirebaseStorageService;
 import com.Doantotnghiep.vehicle_rescue.system.service.SmsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +26,9 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.OffsetDateTime;
@@ -48,6 +52,7 @@ public class MechanicProfileService {
     private final ServiceRepository serviceRepository;
     private final MechanicSubscriptionRepository subscriptionRepository;
     private final SmsService smsService;
+    private final FirebaseStorageService storageService;
     public ProfileResponseDTO getProfile() {
         String username = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
@@ -62,6 +67,7 @@ public class MechanicProfileService {
                 .fullName(account.getFullName())
                 .email(account.getEmail())
                 .phoneNumber(account.getPhoneNumber())
+                .avatarUrl(account.getAvatarUrl())
                 .type(mechanic.getType())
                 .workType(mechanic.getWorkType())
                 .subsEndDate(mechanic.getSubsEndDate());
@@ -73,7 +79,7 @@ public class MechanicProfileService {
         }
         return builder.build();
     }
-    public ProfileResponseDTO updateProfile(UpdateProfileRequestDTO request){
+    public ProfileResponseDTO updateProfile(UpdateProfileRequestDTO request, MultipartFile fileImage) {
         String username = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
 
@@ -82,7 +88,14 @@ public class MechanicProfileService {
 
         Mechanic mechanic = mechanicRepository.findByAccount(account)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
-
+        if (fileImage != null && !fileImage.isEmpty()) {
+            try {
+                String fileUrl = storageService.uploadFile(fileImage);
+                account.setAvatarUrl(fileUrl);
+            } catch (IOException e) {
+                throw new RuntimeException("Lỗi upload ảnh: " + e.getMessage());
+            }
+        }
         // Cập nhật Account
         account.setFullName(request.getFullName());
         account.setPhoneNumber(request.getPhoneNumber());
@@ -225,14 +238,11 @@ public class MechanicProfileService {
 
         Mechanic mechanic = mechanicRepository.findByAccount(account)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
-
-
         boolean hasActiveOrder = rescueOrderRepository
                 .existsByMechanicIdAndStatusIn(
                         mechanic.getMechanicId(),
                         List.of(OrderStatus.ACCEPTED, OrderStatus.IN_PROGRESS)
                 );
-
         if (hasActiveOrder) {
             throw new CustomException(ErrorCode.ORDER_ALREADY_IN_PROGRESS);
         }
@@ -243,29 +253,14 @@ public class MechanicProfileService {
         if (!order.getMechanicId().equals(mechanic.getMechanicId())) {
             throw new CustomException(ErrorCode.ACCESS_DENIED);
         }
-
+        mechanic.setStatus(MechanicStatus.BUSY);
+        mechanicRepository.save(mechanic);
         if (order.getStatus() != OrderStatus.REQUESTED) {
             throw new CustomException(ErrorCode.ORDER_INVALID_STATUS);
         }
 
         order.setStatus(OrderStatus.ACCEPTED);
-        if (mechanic.getWorkType() == MechanicWorkType.MOBILE) {
-            smsService.sendSms(
-                    order.getCustomerPhone(),
-                    "Tho da nhan yeu cau! "
-                            + "Tho: " + mechanic.getDisplayName() + ". "
-                            + ". SDT: " + mechanic.getPhoneNumber()
-                            + ". Vui long cho."
-            );
-        } else {
-            smsService.sendSms(
-                    order.getCustomerPhone(),
-                    "Tho da nhan yeu cau! "
-                            + "Gara: " + mechanic.getGarageName() + ". "
-                            + "Dia chi: " + mechanic.getGarageAddress() + ". "
-                            + "Vui long cho trong giay lat."
-            );
-        }
+        smsService.sendSms(order.getCustomerPhone(), "Cứu hộ đang đến.");
         rescueOrderRepository.save(order);
     }
 
@@ -339,7 +334,8 @@ public class MechanicProfileService {
         if (order.getStatus() != OrderStatus.IN_PROGRESS) {
             throw new CustomException(ErrorCode.ORDER_INVALID_STATUS);
         }
-
+        mechanic.setStatus(MechanicStatus.ONLINE);
+        mechanicRepository.save(mechanic);
         order.setStatus(OrderStatus.COMPLETED);
         order.setCompletedAt(OffsetDateTime.now());
         rescueOrderRepository.save(order);
@@ -594,7 +590,8 @@ public class MechanicProfileService {
 
         // 🔹 Lấy review stats
         List<Object[]> statsList = reviewRepository.getReviewStats(mechanicId);
-
+        Account account = accountRepository.findById(mechanic.getAccount().getAccountId())
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         Double avgRating = 0.0;
         Long totalReviews = 0L;
 
@@ -614,6 +611,7 @@ public class MechanicProfileService {
         return MechanicDetailResponse.builder()
                 .mechanicName(mechanicName)
                 .mechanicPhone(mechanic.getPhoneNumber())
+                .avatarUrl(account.getAvatarUrl())
                 .avgRating(avgRating)
                 .totalReviews(totalReviews)
                 .type(mechanic.getType().name())
@@ -621,7 +619,7 @@ public class MechanicProfileService {
                 .address(address)
                 .build();
     }
-    public void requestRenewal(RenewalRequest request) {
+    public void requestRenewal(MultipartFile billImage) {
         String username = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
 
@@ -630,7 +628,12 @@ public class MechanicProfileService {
 
         Mechanic mechanic = mechanicRepository.findByAccount(account)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
-
+        String fileUrl;
+        try {
+           fileUrl = storageService.uploadFile(billImage);
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi upload ảnh: " + e.getMessage());
+        }
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime currentEnd = mechanic.getSubsEndDate();
 
@@ -649,7 +652,7 @@ public class MechanicProfileService {
                 .currentEndDate(currentEnd)
                 .newEndDate(newEnd)
                 .renewalDate(now)
-                .billImageUrl(request.getBillImageUrl())
+                .billImageUrl(fileUrl)
                 .status(SubscriptionStatus.PENDING)
                 .build();
         subscriptionRepository.save(sub);

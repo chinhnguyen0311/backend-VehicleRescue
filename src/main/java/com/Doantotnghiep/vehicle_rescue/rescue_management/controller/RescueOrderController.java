@@ -34,11 +34,15 @@ public class RescueOrderController {
         List<MechanicSearchResultDTO> result =
                 rescueOrderService.searchNearbyMechanics(request);
 
+        String message = result.isEmpty()
+                ? "Không tìm thấy thợ sửa xe phù hợp trong khu vực của bạn"
+                : "Tìm thấy " + result.size() + " thợ sửa xe";
+
         return ApiResponse.<List<MechanicSearchResultDTO>>builder()
                 .success(true)
                 .code(200)
                 .data(result)
-                .message("Tìm kiếm thợ sửa xe thành công")
+                .message(message)
                 .build();
     }
     @PostMapping

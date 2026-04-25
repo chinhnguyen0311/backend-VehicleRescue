@@ -117,6 +117,8 @@ CREATE TABLE reports (
     reported_by_type VARCHAR(50) NOT NULL,
     reporter_phone VARCHAR(20) NOT NULL,
     reason_category VARCHAR(100) NOT NULL,
+    target_phone VARCHAR(20),
+    reported_target VARCHAR(50),
     content TEXT NOT NULL,
     status VARCHAR(50) DEFAULT 'PENDING',
     admin_note TEXT,

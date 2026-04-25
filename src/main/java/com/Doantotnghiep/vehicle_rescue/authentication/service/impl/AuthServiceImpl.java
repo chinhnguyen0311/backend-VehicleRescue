@@ -21,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -35,8 +36,8 @@ public class AuthServiceImpl implements AuthService {
     private final AccountService accountService;
 
     @Override
-    public String register(RegisterRequest registerRequest) {
-        return accountService.registerAccount(registerRequest);
+    public String register(RegisterRequest registerRequest, MultipartFile fileImage) {
+        return accountService.registerAccount(registerRequest, fileImage);
     }
 
     @Override

@@ -2,12 +2,13 @@ package com.Doantotnghiep.vehicle_rescue.authentication.service;
 
 import com.Doantotnghiep.vehicle_rescue.authentication.dto.request.RegisterRequest;
 import com.Doantotnghiep.vehicle_rescue.authentication.entity.Account;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 import java.util.UUID;
 
 public interface AccountService {
-    String registerAccount(RegisterRequest request);
+    String registerAccount(RegisterRequest request, MultipartFile fileImage);
 
     Optional<Account> getAccountById(UUID accountId);
 

@@ -25,6 +25,8 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     boolean existsByEmail(String email);
 
+    boolean existsByPhoneNumber(String phoneNumber);
+
     Account findByRefreshTokenAndUsername(String token, String username);
     @Query("""
 SELECT new com.Doantotnghiep.vehicle_rescue.system.dto.response.PendingAccountResponse(

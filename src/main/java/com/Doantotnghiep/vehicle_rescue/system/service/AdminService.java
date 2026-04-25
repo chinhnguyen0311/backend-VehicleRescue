@@ -187,6 +187,7 @@ public class AdminService {
                         .workType((String) row[9])
                         .garageName((String) row[10])
                         .garageAddress((String) row[11])
+                        .avatarUrl((String) row[12])
                         .build()
                 )
                 .toList();

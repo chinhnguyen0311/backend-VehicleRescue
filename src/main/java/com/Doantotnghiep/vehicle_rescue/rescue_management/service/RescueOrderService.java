@@ -21,10 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -51,7 +48,8 @@ public class RescueOrderService {
         List<Object[]> results = mechanicRepository.findNearbyMechanics(
                 request.getLatitude(),
                 request.getLongitude(),
-                request.getServiceId()
+                request.getServiceId(),
+                request.getType()
         );
 
         List<MechanicSearchResultDTO> list = results.stream().map(row -> {
@@ -89,6 +87,7 @@ public class RescueOrderService {
                     .type(types)
                     .services(services)
                     .ratingScore(row[8] != null ? new BigDecimal(row[8].toString()) : BigDecimal.ZERO)
+                    .avatarUrl(row[9] != null ? row[9].toString() : null)
                     .completedOrders(completedOrders)
                     .distance((Double) row[row.length - 1]) // tạm thời là distance thẳng
                     .build();
@@ -99,7 +98,9 @@ public class RescueOrderService {
                         .limit(5)
                         .toList()
         );
-
+        if (topList.isEmpty()) {
+            return Collections.emptyList(); // 👈 trả về luôn, không gọi ORS
+        }
 // 🔥 gọi ORS lấy distance thật
         List<Double> realDistances = distanceService.getRealDistances(
                 request.getLatitude(),

@@ -17,7 +17,7 @@ public class MechanicAdminResponse {
     private String mechanicName;
     private String mechanicPhone;
     private String mechanicEmail;
-
+    private String avatarUrl;
     private Double avgRating;
     private Long totalCompleted;
 

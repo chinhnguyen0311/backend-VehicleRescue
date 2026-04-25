@@ -24,7 +24,8 @@ public interface MechanicRepository extends JpaRepository<Mechanic, UUID> {
                        m.garage_name,
                        m.garage_location,
                        m.work_type,
-                       m.rating_score, 
+                       m.rating_score,
+                       a.avatar_url, 
         ST_Distance(
             CASE 
                 WHEN m.work_type = 'GARAGE' THEN m.garage_location
@@ -34,8 +35,11 @@ public interface MechanicRepository extends JpaRepository<Mechanic, UUID> {
         ) / 1000 AS distance
     FROM mechanics m
     JOIN mechanic_services ms ON ms.mechanic_id = m.mechanic_id
+    LeFT JOIN accounts a ON m.account_id = a.account_id
     WHERE ms.service_id = :serviceId
         AND m.is_active_subs = true
+        AND m.type=:type
+        AND m.status != 'BUSY'
         AND (
             CASE 
                 WHEN m.work_type = 'GARAGE' THEN m.garage_location
@@ -48,7 +52,8 @@ public interface MechanicRepository extends JpaRepository<Mechanic, UUID> {
     List<Object[]> findNearbyMechanics(
             @Param("latitude") Double latitude,
             @Param("longitude") Double longitude,
-            @Param("serviceId") UUID serviceId);
+            @Param("serviceId") UUID serviceId,
+            @Param("type") String type);
 
     @Query(value = """
 SELECT 
@@ -63,7 +68,8 @@ SELECT
     a.is_active,
     m.work_type,
     CASE WHEN m.work_type = 'GARAGE' THEN m.garage_name ELSE NULL END AS garage_name,
-    CASE WHEN m.work_type = 'GARAGE' THEN m.garage_address ELSE NULL END AS garage_address
+    CASE WHEN m.work_type = 'GARAGE' THEN m.garage_address ELSE NULL END AS garage_address,
+    a.avatar_url
 FROM mechanics m
 JOIN accounts a ON m.account_id = a.account_id
 LEFT JOIN rescue_orders o ON o.mechanic_id = m.mechanic_id
@@ -78,7 +84,8 @@ GROUP BY
     a.is_active,
     m.work_type,
     m.garage_name,
-    m.garage_address
+    m.garage_address,
+    a.avatar_url
 """, nativeQuery = true)
     List<Object[]> getAllMechanicStats();
 }

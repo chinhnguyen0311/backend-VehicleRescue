@@ -23,6 +23,8 @@ public class SearchMechanicRequestDTO {
     @NotNull(message = "Dịch vụ không được để trống")
     private UUID serviceId;
 
+    private String type;
+
     @NotNull(message = "Vĩ độ không được để trống")
     private Double latitude;
 

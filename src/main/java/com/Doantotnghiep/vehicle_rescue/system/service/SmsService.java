@@ -6,48 +6,44 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class SmsService {
-    @Value("${esms.api-key}")
+    @Value("${vonage.api-key}")
     private String apiKey;
 
-    @Value("${esms.secret-key}")
-    private String secretKey;
-
-    @Value("${esms.brandname}")
-    private String brandname;
+    @Value("${vonage.api-secret}")
+    private String apiSecret;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     public void sendSms(String phone, String message) {
-        // 1. Dọn dẹp số điện thoại (Xóa khoảng trắng, thêm số 0 nếu cần)
+        // 1. Format số điện thoại chuẩn quốc tế cho Vonage (vd: 84987654321)
         String formattedPhone = phone.trim();
-        if (formattedPhone.startsWith("+84")) {
-            formattedPhone = "0" + formattedPhone.substring(3);
+        if (formattedPhone.startsWith("0")) {
+            formattedPhone = "84" + formattedPhone.substring(1);
+        } else if (formattedPhone.startsWith("+84")) {
+            formattedPhone = "84" + formattedPhone.substring(3);
         }
 
-        String url = "https://rest.esms.vn/MainService.svc/json/SendMultipleMessage_V4_post_json/";
+        String url = "https://rest.nexmo.com/sms/json";
 
+        // 2. Tạo Body Request
         Map<String, Object> body = new HashMap<>();
-        body.put("Phone", formattedPhone);
-        body.put("Content", message); // Bắt buộc text thuần (không Emoji)
-        body.put("ApiKey", apiKey);
-        body.put("SecretKey", secretKey);
+        body.put("api_key", apiKey);
+        body.put("api_secret", apiSecret);
+        body.put("to", formattedPhone);
 
-        // 🔥 ĐÃ SỬA 1: Tạm thời vô hiệu hóa Brandname vì tài khoản chưa được duyệt (Lỗi 104)
-        // Nếu eSMS bắt buộc phải có key này đối với loại 8, hãy điền thử: body.put("Brandname", "Verify");
-        // Còn thường thì chúng ta chỉ cần comment nó lại:
-        // body.put("Brandname", brandname);
-
-        // 🔥 ĐÃ SỬA 2: Đổi SmsType từ 2 thành 8 (Loại tin nhắn chăm sóc khách hàng bằng đầu số chung)
-        body.put("SmsType", 8);
-
-        // Bỏ comment dòng dưới nếu bạn truyền chuỗi tiếng Việt CÓ DẤU
-        // body.put("IsUnicode", "1");
+        // Sender mặc định cho tài khoản Trial thường là chữ "Vonage APIs"
+        body.put("from", "Vonage APIs");
+        body.put("type", "unicode");
+        // Vẫn nên gửi tiếng Việt không dấu để đảm bảo tin nhắn không bị vỡ font
+        body.put("text", message);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -56,10 +52,10 @@ public class SmsService {
 
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-            System.out.println("=== SMS RESPONSE TRẢ VỀ TỪ ESMS ===");
+            System.out.println("=== SMS RESPONSE TỪ VONAGE ===");
             System.out.println(response.getBody());
         } catch (Exception e) {
-            System.err.println("Lỗi gọi API eSMS: " + e.getMessage());
+            System.err.println("Lỗi gọi API Vonage: " + e.getMessage());
         }
     }
 

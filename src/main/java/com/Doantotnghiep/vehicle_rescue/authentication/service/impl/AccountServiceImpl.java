@@ -12,12 +12,14 @@ import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicWorkType;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.map.DistanceService;
+import com.Doantotnghiep.vehicle_rescue.system.service.FirebaseStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,9 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -42,20 +47,26 @@ public class AccountServiceImpl implements AccountService {
     private final DistanceService distanceService;
     private static final GeometryFactory GEOMETRY_FACTORY =
             new GeometryFactory(new PrecisionModel(), 4326);
+    private final FirebaseStorageService storageService;
     @Override
-    public String registerAccount(RegisterRequest request) {
+    public String registerAccount(RegisterRequest request, MultipartFile fileImage) {
         log.info("Registering new account: {}", request.getUsername());
-
-        // Kiểm tra username đã tồn tại
         if (accountRepository.existsByUsername(request.getUsername())) {
             throw new CustomException(ErrorCode.USERNAME_ALREADY_EXISTS);
         }
 
-        // Kiểm tra email đã tồn tại
         if (accountRepository.existsByEmail(request.getEmail())) {
             throw new CustomException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
-
+        if (accountRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new CustomException(ErrorCode.PHONE_NUMBER_ALREADY_EXISTS);
+        }
+        String fileUrl;
+        try {
+            fileUrl = storageService.uploadFile(fileImage);
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi upload ảnh: " + e.getMessage());
+        }
         Account account = Account.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -65,6 +76,7 @@ public class AccountServiceImpl implements AccountService {
                 .isActive(false)
                 .emailVerified(false)
                 .status(AccountStatus.PENDING)
+                .avatarUrl(fileUrl)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .lastActive(LocalDateTime.now())

@@ -5,12 +5,13 @@ import com.Doantotnghiep.vehicle_rescue.authentication.dto.request.ChangePasswor
 import com.Doantotnghiep.vehicle_rescue.authentication.dto.request.RegisterRequest;
 import com.Doantotnghiep.vehicle_rescue.authentication.dto.response.LoginResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface AuthService {
     /**
      * Đăng ký tài khoản mới
      */
-    String register(RegisterRequest registerRequest);
+    String register(RegisterRequest registerRequest, MultipartFile fileImage);
 
     /**
      * Đăng nhập

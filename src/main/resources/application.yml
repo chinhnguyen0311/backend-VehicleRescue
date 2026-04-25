@@ -29,11 +29,15 @@ spring:
           auth: true
           starttls:
             enable: true
-esms:
-  api-key: A6736526F2BF397C8E427978AC011B
-  secret-key: 4F7A00D6BB9D1B77A11A5CF1AD2C56
-  brandname: vehicle rescue
+vonage:
+  api-key: 3807ec1c
+  api-secret: 5Tku0G4MTcOFnEij
 vehicle-rescue:
+  firebase:
+    storage:
+      bucket: vehicle-resuce-13e96.firebasestorage.app
+    credentials:
+      path: firebase-credentials.json
   jwt:
     base64-secret: "VGhpcyBpcyBhIDY0IGJ5dGUgc2VjcmV0IGtleSBmb3IgSFM1MTIgYWxnb3JpdGhtIGZvciBWZWhpY2xlIFJlc2N1ZSBKV1QgVG9rZW4h"
     access-token-validity-in-seconds: 3600

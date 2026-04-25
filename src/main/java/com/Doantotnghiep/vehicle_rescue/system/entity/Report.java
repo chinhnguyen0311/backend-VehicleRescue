@@ -1,6 +1,7 @@
 package com.Doantotnghiep.vehicle_rescue.system.entity;
 
 import com.Doantotnghiep.vehicle_rescue.system.enums.ReasonCategory;
+import com.Doantotnghiep.vehicle_rescue.system.enums.RelatedType;
 import com.Doantotnghiep.vehicle_rescue.system.enums.ReportStatus;
 import com.Doantotnghiep.vehicle_rescue.system.enums.ReportedByType;
 import jakarta.persistence.*;
@@ -37,6 +38,13 @@ public class Report {
     @Enumerated(EnumType.STRING)
     @Column(name = "reason_category", length = 100, nullable = false)
     private ReasonCategory reasonCategory;
+
+    @Column(name = "target_phone", length = 20, nullable = false)
+    private String targetPhone;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reported_target", length = 50)
+    private RelatedType reportedTarget;
 
     @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String content;

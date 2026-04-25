@@ -9,11 +9,9 @@ import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,9 +26,11 @@ public class AuthController {
     @Value("${vehicle-rescue.jwt.refresh-token-validity-in-seconds}")
     private long refreshTokenExpiration;
 
-    @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
-        String response = authService.register(request);
+    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> register(
+            @ModelAttribute @Valid RegisterRequest request,
+            @RequestPart("file") MultipartFile fileImage) {
+        String response = authService.register(request, fileImage);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

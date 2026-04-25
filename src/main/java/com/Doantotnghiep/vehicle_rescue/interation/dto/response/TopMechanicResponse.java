@@ -15,6 +15,7 @@ public class TopMechanicResponse {
     private UUID mechanicId;
     private String mechanicName;
     private Double avgRating;
+    private String avatarUrl;
     private Long totalReviews;
     private Long totalCompleted;
 }

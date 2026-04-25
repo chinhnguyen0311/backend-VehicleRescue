@@ -19,6 +19,7 @@ public class MechanicSearchResultDTO {
     private Double latitude;
     private Double longitude;
     private String phoneNumber;
+    private String avatarUrl;
     private List<String> type;       // Loại xe sửa được
     private List<MechanicServiceResponseDTO> services;
     private BigDecimal ratingScore;

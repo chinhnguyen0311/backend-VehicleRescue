@@ -13,6 +13,7 @@ public enum ErrorCode {
     INVALID_PASSWORD(1002, "Mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
     USERNAME_ALREADY_EXISTS(1003, "Tên đăng nhập đã được sử dụng", HttpStatus.CONFLICT),
     EMAIL_ALREADY_EXISTS(1004, "Email đã được đăng ký", HttpStatus.CONFLICT),
+    PHONE_NUMBER_ALREADY_EXISTS(1005, "Số điện thoại đã được sử dụng", HttpStatus.CONFLICT),
     INVALID_OLD_PASSWORD(1005, "Mật khẩu hiện tại không đúng", HttpStatus.BAD_REQUEST),
     UNAUTHORIZED(1006, "Phiên đăng nhập không hợp lệ hoặc đã hết hạn", HttpStatus.UNAUTHORIZED),
     INVALID_REFRESH_TOKEN(1007, "Refresh token không hợp lệ hoặc đã bị thu hồi", HttpStatus.UNAUTHORIZED),

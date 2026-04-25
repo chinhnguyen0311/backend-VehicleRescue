@@ -1,5 +1,6 @@
 package com.Doantotnghiep.vehicle_rescue.interation.service;
 
+import com.Doantotnghiep.vehicle_rescue.authentication.entity.Account;
 import com.Doantotnghiep.vehicle_rescue.common.exception.CustomException;
 import com.Doantotnghiep.vehicle_rescue.common.exception.ErrorCode;
 import com.Doantotnghiep.vehicle_rescue.interation.dto.request.CreateReviewRequest;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -58,6 +60,13 @@ public class ReviewService {
                 .build();
 
         reviewRepository.save(review);
+        List<Object[]> statsList = reviewRepository.getReviewStats(mechanic.getMechanicId());
+        if (statsList != null && !statsList.isEmpty()) {
+            Object[] stats = statsList.get(0);
+            Double avgRating = stats[0] != null ? ((Number) stats[0]).doubleValue() : 0.0;
+            mechanic.setRatingScore(BigDecimal.valueOf(avgRating));
+            mechanicRepository.save(mechanic);
+        }
     }
     public List<TopMechanicResponse> getTop5Mechanics() {
 
@@ -128,7 +137,7 @@ public class ReviewService {
                 .limit(5)
                 .map(t -> {
                     Mechanic mcn = t.getMechanic();
-
+                    Account acc = mcn.getAccount();
                     String name = mcn.getWorkType().name().equals("GARAGE")
                             ? mcn.getGarageName()
                             : mcn.getDisplayName();
@@ -137,6 +146,7 @@ public class ReviewService {
                             .mechanicId(mcn.getMechanicId())
                             .mechanicName(name)
                             .avgRating(t.getAvgRating())
+                            .avatarUrl(acc.getAvatarUrl())
                             .totalReviews(t.getTotalReviews())
                             .totalCompleted(t.getTotalCompleted())
                             .build();

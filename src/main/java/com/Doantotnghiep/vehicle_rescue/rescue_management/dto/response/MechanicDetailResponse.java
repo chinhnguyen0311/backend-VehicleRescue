@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class MechanicDetailResponse {
     private String mechanicName;
     private String mechanicPhone;
+    private String avatarUrl;
     private Double avgRating;
     private Long totalReviews;
     private String type;      // MOTORBIKE / CAR / TRUCK

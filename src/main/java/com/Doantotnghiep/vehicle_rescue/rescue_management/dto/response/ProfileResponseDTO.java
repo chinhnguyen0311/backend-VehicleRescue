@@ -23,4 +23,5 @@ public class ProfileResponseDTO {
     // Chỉ có khi workType = GARAGE
     private String garageName;
     private String garageAddress;
+    private String avatarUrl;
 }
