@@ -1,6 +1,7 @@
 package com.Doantotnghiep.vehicle_rescue.rescue_management.controller;
 
 import com.Doantotnghiep.vehicle_rescue.common.dto.ApiResponse;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.CreateReportRequest;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.CreateRescueOrderRequest;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.CustomerOrderResponse;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.MechanicSearchResultDTO;
@@ -65,6 +66,16 @@ public class RescueOrderController {
                 .code(200)
                 .message("Lấy đơn đang hoạt động thành công")
                 .data(rescueOrderService.getMyOrders(phone))
+                .build();
+    }
+    @PostMapping("/report")
+    public ApiResponse<Void> reportByCustomer(@RequestBody CreateReportRequest request) {
+        rescueOrderService.reportByCustomer(request);
+
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(200)
+                .message("Báo cáo thành công")
                 .build();
     }
 }

@@ -1,5 +1,8 @@
 package com.Doantotnghiep.vehicle_rescue.rescue_management.service;
 
+import com.Doantotnghiep.vehicle_rescue.common.exception.CustomException;
+import com.Doantotnghiep.vehicle_rescue.common.exception.ErrorCode;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.CreateReportRequest;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.CreateRescueOrderRequest;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.SearchMechanicRequestDTO;
@@ -12,6 +15,11 @@ import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicSer
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.RescueOrderRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.ServiceRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.map.DistanceService;
+import com.Doantotnghiep.vehicle_rescue.system.entity.Report;
+import com.Doantotnghiep.vehicle_rescue.system.enums.RelatedType;
+import com.Doantotnghiep.vehicle_rescue.system.enums.ReportStatus;
+import com.Doantotnghiep.vehicle_rescue.system.enums.ReportedByType;
+import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
 import com.Doantotnghiep.vehicle_rescue.system.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +43,8 @@ public class RescueOrderService {
     private final DistanceService distanceService;
     private final RescueOrderMapper rescueOrderMapper;
     private final ServiceRepository serviceRepository;
-        private final EmailService emailService;
+    private final EmailService emailService;
+    private final ReportRepository reportRepository;
     public List<ServiceResponseDTO> getAllServices() {
         return serviceRepository.findAll().stream()
                 .map(s -> ServiceResponseDTO.builder()
@@ -49,7 +58,8 @@ public class RescueOrderService {
                 request.getLatitude(),
                 request.getLongitude(),
                 request.getServiceId(),
-                request.getType()
+                request.getType(),
+                request.getCustomerPhone()
         );
 
         List<MechanicSearchResultDTO> list = results.stream().map(row -> {
@@ -238,5 +248,25 @@ public class RescueOrderService {
 
         }).toList();
 
+    }
+    public void reportByCustomer(CreateReportRequest request) {
+
+        RescueOrder order = rescueOrderRepository.findById(request.getOrderId())
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            throw new CustomException(ErrorCode.ORDER_ALREADY_COMPLETED);
+        }
+        Report report = Report.builder()
+                .orderId(order.getOrderId())
+                .reportedByType(ReportedByType.CUSTOMER)
+                .reporterPhone(order.getCustomerPhone())
+                .targetPhone(request.getTargetPhone())
+                .reasonCategory(request.getReasonCategory())
+                .content(request.getContent())
+                .reportedTarget(RelatedType.MECHANIC)
+                .status(ReportStatus.PENDING)
+                .build();
+        reportRepository.save(report);
     }
 }

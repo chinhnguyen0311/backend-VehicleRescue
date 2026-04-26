@@ -2,10 +2,7 @@ package com.Doantotnghiep.vehicle_rescue.system.controller;
 
 import com.Doantotnghiep.vehicle_rescue.common.dto.ApiResponse;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.SubscriptionStatus;
-import com.Doantotnghiep.vehicle_rescue.system.dto.response.AdminDashboardResponse;
-import com.Doantotnghiep.vehicle_rescue.system.dto.response.MechanicAdminResponse;
-import com.Doantotnghiep.vehicle_rescue.system.dto.response.PendingAccountResponse;
-import com.Doantotnghiep.vehicle_rescue.system.dto.response.SubscriptionResponse;
+import com.Doantotnghiep.vehicle_rescue.system.dto.response.*;
 import com.Doantotnghiep.vehicle_rescue.system.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -90,6 +87,15 @@ public class AdminController {
                 .success(true)
                 .code(200)
                 .message("Từ chối gia hạn thành công")
+                .build();
+    }
+    @GetMapping("/reports")
+    public ApiResponse<List<ReportAdminResponse>> getReports() {
+        return ApiResponse.<List<ReportAdminResponse>>builder()
+                .success(true)
+                .code(200)
+                .message("Lấy danh sách báo cáo thành công")
+                .data(adminService.getAllReportsForAdmin())
                 .build();
     }
 }

@@ -1,10 +1,7 @@
 package com.Doantotnghiep.vehicle_rescue.rescue_management.controller;
 
 import com.Doantotnghiep.vehicle_rescue.common.dto.ApiResponse;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.AddMechanicServiceRequestDTO;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.RenewalRequest;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateMechanicServiceRequestDTO;
-import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.UpdateProfileRequestDTO;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.MechanicProfileService;
 import jakarta.validation.Valid;
@@ -165,6 +162,15 @@ public class MechanicController {
                 .success(true)
                 .code(200)
                 .message("Gửi yêu cầu gia hạn thành công")
+                .build();
+    }
+    @PostMapping("/report")
+    public ApiResponse<Void> reportByMechanic(@RequestBody CreateReportRequest request) {
+        mechanicService.reportByMechanic(request);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(200)
+                .message("Báo cáo thành công")
                 .build();
     }
 }

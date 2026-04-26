@@ -15,6 +15,7 @@ public interface MechanicRepository extends JpaRepository<Mechanic, UUID> {
     boolean existsByAccount(Account account);
     List<Mechanic> findAll();
     Optional<Mechanic> findByAccount(Account account);
+    Optional<Mechanic> findByPhoneNumber(String phoneNumber);
     @Query(value = """
     SELECT m.mechanic_id,
                        m.type,
@@ -37,6 +38,7 @@ public interface MechanicRepository extends JpaRepository<Mechanic, UUID> {
     JOIN mechanic_services ms ON ms.mechanic_id = m.mechanic_id
     LeFT JOIN accounts a ON m.account_id = a.account_id
     WHERE ms.service_id = :serviceId
+        AND m.phone_number != :customerPhone
         AND m.is_active_subs = true
         AND m.type=:type
         AND m.status != 'BUSY'
@@ -53,8 +55,9 @@ public interface MechanicRepository extends JpaRepository<Mechanic, UUID> {
             @Param("latitude") Double latitude,
             @Param("longitude") Double longitude,
             @Param("serviceId") UUID serviceId,
-            @Param("type") String type);
-
+            @Param("type") String type,
+            @Param("customerPhone") String customerPhone)
+            ;
     @Query(value = """
 SELECT 
     m.mechanic_id,

@@ -17,6 +17,11 @@ import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.OrderStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.SubscriptionStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.*;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.service.map.DistanceService;
+import com.Doantotnghiep.vehicle_rescue.system.entity.Report;
+import com.Doantotnghiep.vehicle_rescue.system.enums.RelatedType;
+import com.Doantotnghiep.vehicle_rescue.system.enums.ReportStatus;
+import com.Doantotnghiep.vehicle_rescue.system.enums.ReportedByType;
+import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
 import com.Doantotnghiep.vehicle_rescue.system.service.FirebaseStorageService;
 import com.Doantotnghiep.vehicle_rescue.system.service.SmsService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +42,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.Doantotnghiep.vehicle_rescue.system.enums.RelatedType.CUSTOMER;
+import static com.Doantotnghiep.vehicle_rescue.system.enums.RelatedType.SYSTEM;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -52,6 +60,7 @@ public class MechanicProfileService {
     private final ServiceRepository serviceRepository;
     private final MechanicSubscriptionRepository subscriptionRepository;
     private final SmsService smsService;
+    private final ReportRepository reportRepository;
     private final FirebaseStorageService storageService;
     public ProfileResponseDTO getProfile() {
         String username = SecurityUtil.getCurrentUserLogin()
@@ -657,6 +666,61 @@ public class MechanicProfileService {
                 .build();
         subscriptionRepository.save(sub);
     }
+    public void reportByMechanic(CreateReportRequest request) {
+
+        String username = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
+
+        Account account = accountRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        Mechanic mechanic = mechanicRepository.findByAccount(account)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        RescueOrder order = null;
+
+        // 🔒 Nếu có order thì validate
+        if (request.getOrderId() != null) {
+            order = rescueOrderRepository.findById(request.getOrderId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+            if (!order.getMechanicId().equals(mechanic.getMechanicId())) {
+                throw new CustomException(ErrorCode.ACCESS_DENIED);
+            }
+        }
+        String targetPhone = null;
+
+        switch (request.getTargetType()) {
+
+            case CUSTOMER -> {
+                if (order == null) {
+                    throw new CustomException(ErrorCode.INVALID_REQUEST);
+                }
+
+                // 🔥 lấy số khách từ order (KHÔNG dùng request)
+                targetPhone = order.getCustomerPhone();
+            }
+
+            case SYSTEM -> {
+
+                targetPhone = null;
+            }
+            default -> throw new CustomException(ErrorCode.INVALID_REPORT_TARGET);
+        }
+        Report report = Report.builder()
+                .orderId(order != null ? order.getOrderId() : null)
+                .reportedByType(ReportedByType.MECHANIC)
+                .reporterPhone(mechanic.getPhoneNumber())
+                .reportedTarget(request.getTargetType())
+                .targetPhone(targetPhone)
+                .reasonCategory(request.getReasonCategory())
+                .content(request.getContent())
+                .status(ReportStatus.PENDING)
+                .build();
+
+        reportRepository.save(report);
+    }
+
     private Double extractLat(Object pointObj) {
         if (pointObj == null) return null;
 

@@ -11,6 +11,7 @@ import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.MechanicSubscription;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.RescueOrder;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicWorkType;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.OrderStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.SubscriptionStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
@@ -18,6 +19,10 @@ import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicSub
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.RescueOrderRepository;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.ServiceRepository;
 import com.Doantotnghiep.vehicle_rescue.system.dto.response.*;
+import com.Doantotnghiep.vehicle_rescue.system.entity.Report;
+import com.Doantotnghiep.vehicle_rescue.system.enums.RelatedType;
+import com.Doantotnghiep.vehicle_rescue.system.enums.ReportedByType;
+import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +44,7 @@ public class AdminService {
     private final ReviewRepository reviewRepository;
     private final AccountRepository accountRepository;
     private final MechanicSubscriptionRepository subscriptionRepository;
+    private final ReportRepository reportRepository;
     public AdminDashboardResponse getDashboard() {
 
         long totalCompleted = rescueOrderRepository.countByStatus(OrderStatus.COMPLETED);
@@ -263,6 +269,79 @@ public class AdminService {
         mechanic.setIsActiveSubs(false);
         sub.setStatus(SubscriptionStatus.REJECTED);
         subscriptionRepository.save(sub);
+    }
+    public List<ReportAdminResponse> getAllReportsForAdmin() {
+
+        List<Report> reports = reportRepository.findAllOrderByCreatedAtDesc();
+
+        return reports.stream().map(r -> {
+
+            String reporterName;
+            String target;
+
+            RescueOrder order = null;
+
+            if (r.getOrderId() != null) {
+                order = rescueOrderRepository.findById(r.getOrderId()).orElse(null);
+            }
+
+            // 👤 Reporter
+            if (r.getReportedByType() == ReportedByType.MECHANIC) {
+
+                Mechanic mechanic = mechanicRepository
+                        .findByPhoneNumber(r.getReporterPhone())
+                        .orElse(null);
+
+                if (mechanic != null) {
+                    reporterName = mechanic.getWorkType() == MechanicWorkType.GARAGE
+                            ? mechanic.getGarageName()
+                            : mechanic.getDisplayName();
+                } else {
+                    reporterName = r.getReporterPhone();
+                }
+
+            } else {
+                // CUSTOMER → lấy từ ORDER
+                reporterName = (order != null)
+                        ? order.getCustomerName()
+                        : r.getReporterPhone();
+            }
+
+            // 🎯 Target
+            if (r.getReportedTarget() == RelatedType.SYSTEM) {
+                target = "Hệ thống";
+
+            } else if (r.getReportedTarget() == RelatedType.MECHANIC) {
+
+                Mechanic mechanic = mechanicRepository
+                        .findByPhoneNumber(r.getTargetPhone())
+                        .orElse(null);
+
+                if (mechanic != null) {
+                    target = mechanic.getWorkType() == MechanicWorkType.GARAGE
+                            ? mechanic.getGarageName()
+                            : mechanic.getDisplayName();
+                } else {
+                    target = r.getTargetPhone();
+                }
+
+            } else {
+                // CUSTOMER → lấy từ ORDER
+                target = (order != null)
+                        ? order.getCustomerName()
+                        : r.getTargetPhone();
+            }
+
+            return ReportAdminResponse.builder()
+                    .reportId(r.getReportId())
+                    .reason(r.getReasonCategory().name())
+                    .reportedByType(r.getReportedByType())
+                    .reporterName(reporterName)
+                    .target(target)
+                    .content(r.getContent())
+                    .createdAt(r.getCreatedAt())
+                    .build();
+        }).toList();
     }
     private LocalDateTime toLocalDateTime(Object obj) {
         if (obj == null) return null;

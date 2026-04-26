@@ -34,7 +34,10 @@ public enum ErrorCode {
     INVALID_ADDRESS(4004, "Địa chỉ không hợp lệ hoặc không tìm thấy", HttpStatus.BAD_REQUEST),
     BAD_REQUEST(4000, "Yêu cầu không hợp lệ", HttpStatus.BAD_REQUEST),
     SUBSCRIPTION_NOT_FOUND(5001, "Gói cước không tồn tại", HttpStatus.NOT_FOUND),
-    SUBSCRIPTION_INVALID_STATUS(5002, "Trạng thái gói cước không hợp lệ", HttpStatus.BAD_REQUEST)
+    SUBSCRIPTION_INVALID_STATUS(5002, "Trạng thái gói cước không hợp lệ", HttpStatus.BAD_REQUEST),
+    ORDER_ALREADY_COMPLETED(4005, "Đơn hàng đã hoàn thành, không thể báo cáo, hãy đánh giá", HttpStatus.BAD_REQUEST),
+    INVALID_REQUEST(4006, "Yêu cầu không hợp lệ", HttpStatus.BAD_REQUEST),
+    INVALID_REPORT_TARGET(4007, "Đối tượng báo cáo không hợp lệ", HttpStatus.BAD_REQUEST)
     ;
     private final int code;
     private final String message;
