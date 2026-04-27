@@ -24,25 +24,8 @@ public class FirebaseStorageService {
     @Value("${vehicle-rescue.firebase.storage.bucket}")
     private String bucketName;
 
-    private synchronized void ensureFirebaseInitialized() throws IOException {
-        try {
-            FirebaseApp.getInstance();
-            return;
-        } catch (IllegalStateException e) {
-            InputStream serviceAccount = new ClassPathResource("firebase-credentials.json").getInputStream();
-
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .setStorageBucket(bucketName) // <-- Thêm dòng này
-                    .build();
-
-            FirebaseApp.initializeApp(options);
-        }
-    }
 
     public String uploadFile(MultipartFile file) throws IOException {
-        ensureFirebaseInitialized();
-
         FirebaseApp app = FirebaseApp.getInstance();
         // Sử dụng bucketName đã cấu hình
         Bucket bucket = StorageClient.getInstance(app).bucket(bucketName);

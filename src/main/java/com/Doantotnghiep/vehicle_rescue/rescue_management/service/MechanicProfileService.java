@@ -22,7 +22,9 @@ import com.Doantotnghiep.vehicle_rescue.system.enums.RelatedType;
 import com.Doantotnghiep.vehicle_rescue.system.enums.ReportStatus;
 import com.Doantotnghiep.vehicle_rescue.system.enums.ReportedByType;
 import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
+import com.Doantotnghiep.vehicle_rescue.system.service.FcmTokenCacheService;
 import com.Doantotnghiep.vehicle_rescue.system.service.FirebaseStorageService;
+import com.Doantotnghiep.vehicle_rescue.system.service.NotificationService;
 import com.Doantotnghiep.vehicle_rescue.system.service.SmsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -62,6 +65,11 @@ public class MechanicProfileService {
     private final SmsService smsService;
     private final ReportRepository reportRepository;
     private final FirebaseStorageService storageService;
+    @Autowired
+    private FcmTokenCacheService tokenCacheService;
+
+    @Autowired
+    private NotificationService notificationService;
     public ProfileResponseDTO getProfile() {
         String username = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
@@ -269,8 +277,21 @@ public class MechanicProfileService {
         }
 
         order.setStatus(OrderStatus.ACCEPTED);
-        smsService.sendSms(order.getCustomerPhone(), "Cứu hộ đang đến.");
         rescueOrderRepository.save(order);
+        String customerFcmToken = tokenCacheService.getTokenByOrderId(orderId);
+        String mechanicName = mechanic.getWorkType().name().equals("GARAGE")
+                ? mechanic.getGarageName()
+                : mechanic.getDisplayName();
+        if (customerFcmToken != null) {
+            String title = "Đơn cứu hộ đã được nhận!";
+            String body = "Thợ sửa xe " + mechanicName + " đang trên đường đến vị trí của bạn.";
+
+            // Tạo một luồng (thread) riêng để gửi thông báo, tránh làm chậm API nhận đơn của thợ
+            new Thread(() -> {
+                notificationService.sendPushNotification(customerFcmToken, title, body);
+                // Xóa token khỏi RAM sau khi gửi xong (vì chỉ dùng 1 lần)
+            }).start();
+        }
     }
 
     public void cancelOrder(UUID orderId) {
@@ -298,6 +319,21 @@ public class MechanicProfileService {
 
         order.setStatus(OrderStatus.CANCELLED);
         rescueOrderRepository.save(order);
+        String customerFcmToken = tokenCacheService.getTokenByOrderId(orderId);
+        String mechanicName = mechanic.getWorkType().name().equals("GARAGE")
+                ? mechanic.getGarageName()
+                : mechanic.getDisplayName();
+        if (customerFcmToken != null) {
+            String title = "Đơn cứu hộ đã bị từ chối!";
+            String body = "Thợ sửa xe " + mechanicName + " đang đã từ chối yêu cầu của bạn.";
+
+            // Tạo một luồng (thread) riêng để gửi thông báo, tránh làm chậm API nhận đơn của thợ
+            new Thread(() -> {
+                notificationService.sendPushNotification(customerFcmToken, title, body);
+                // Xóa token khỏi RAM sau khi gửi xong (vì chỉ dùng 1 lần)
+                tokenCacheService.removeToken(orderId);
+            }).start();
+        }
     }
     public void inProcessOrder(UUID orderId) {
         String username = SecurityUtil.getCurrentUserLogin()
@@ -322,6 +358,20 @@ public class MechanicProfileService {
 
         order.setStatus(OrderStatus.IN_PROGRESS);
         rescueOrderRepository.save(order);
+        String customerFcmToken = tokenCacheService.getTokenByOrderId(orderId);
+        String mechanicName = mechanic.getWorkType().name().equals("GARAGE")
+                ? mechanic.getGarageName()
+                : mechanic.getDisplayName();
+        if (customerFcmToken != null) {
+            String title = "Đơn cứu hộ đang được thực hiện!";
+            String body = "Thợ sửa xe " + mechanicName + " đang trên đường tới vị trí của bạn.";
+
+            // Tạo một luồng (thread) riêng để gửi thông báo, tránh làm chậm API nhận đơn của thợ
+            new Thread(() -> {
+                notificationService.sendPushNotification(customerFcmToken, title, body);
+                // Xóa token khỏi RAM sau khi gửi xong (vì chỉ dùng 1 lần)
+            }).start();
+        }
     }
     public void completeOrder(UUID orderId) {
         String username = SecurityUtil.getCurrentUserLogin()
@@ -348,6 +398,20 @@ public class MechanicProfileService {
         order.setStatus(OrderStatus.COMPLETED);
         order.setCompletedAt(OffsetDateTime.now());
         rescueOrderRepository.save(order);
+        String customerFcmToken = tokenCacheService.getTokenByOrderId(orderId);
+        String mechanicName = mechanic.getWorkType().name().equals("GARAGE")
+                ? mechanic.getGarageName()
+                : mechanic.getDisplayName();
+        if (customerFcmToken != null) {
+            String title = "Đơn cứu hộ đã hoàn thành!";
+            String body = "Thợ sửa xe " + mechanicName + " sẽ rất vui nếu bạn đánh giá dịch vụ của họ.";
+
+            // Tạo một luồng (thread) riêng để gửi thông báo, tránh làm chậm API nhận đơn của thợ
+            new Thread(() -> {
+                notificationService.sendPushNotification(customerFcmToken, title, body);
+                // Xóa token khỏi RAM sau khi gửi xong (vì chỉ dùng 1 lần)
+            }).start();
+        }
     }
     public MechanicOrderItemResponse getCurrentOrder() {
         String username = SecurityUtil.getCurrentUserLogin()
