@@ -1,10 +1,11 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # ================= DATABASE =================
   postgres:
     image: postgis/postgis:15-3.4
-    container_name: postgres_db_vehicle_rescue
+    container_name: vehicle-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: vehiclerescue_db
       POSTGRES_USER: admin
@@ -14,12 +15,46 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./dump-db_vehicle_rescue.sql:/docker-entrypoint-initdb.d/dump-db_vehicle_rescue.sql
+      - ./dump-db_vehicle_rescue.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
-      - db_network
+      - vehicle-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d vehiclerescue_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================= BACKEND =================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vehicle-backend
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database connection
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vehiclerescue_db
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+
+      # Mail config
+      SPRING_MAIL_USERNAME: nguyenduychinh204@gmail.com
+      SPRING_MAIL_PASSWORD: djxtaieqbsaqlipl
+
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+      - ./images:/app/images
+    networks:
+      - vehicle-network
+
 volumes:
   postgres_data:
 
 networks:
-  db_network:
+  vehicle-network:

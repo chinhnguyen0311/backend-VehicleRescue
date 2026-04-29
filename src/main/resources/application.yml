@@ -1,12 +1,16 @@
+server:
+  port: 8080
+
 spring:
   datasource:
-    url: "jdbc:postgresql://localhost:5433/vehiclerescue_db"
-    username: admin
-    password: admin
-    driver-class-name: "org.postgresql.Driver"
+    # URL trỏ đến container 'postgres'
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/vehiclerescue_db}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
 
   application:
-    name: vehiclerescue
+    name: vehicle-rescue
 
   jpa:
     hibernate:
@@ -21,24 +25,23 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: nguyenduychinh204@gmail.com
-    password: djxtaieqbsaqlipl
+    username: ${SPRING_MAIL_USERNAME:nguyenduychinh204@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:djxtaieqbsaqlipl}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-vonage:
-  api-key: 3807ec1c
-  api-secret: 5Tku0G4MTcOFnEij
+
 vehicle-rescue:
   firebase:
     storage:
       bucket: vehicle-resuce-13e96.firebasestorage.app
     credentials:
-      path: firebase-credentials.json
+      # Sử dụng classpath: để đọc file đã được Maven đóng gói vào thư mục resources của JAR
+      path: ${FIREBASE_CREDENTIALS_PATH:classpath:firebase-credentials.json}
   jwt:
-    base64-secret: "VGhpcyBpcyBhIDY0IGJ5dGUgc2VjcmV0IGtleSBmb3IgSFM1MTIgYWxnb3JpdGhtIGZvciBWZWhpY2xlIFJlc2N1ZSBKV1QgVG9rZW4h"
+    base64-secret: ${JWT_SECRET:VGhpcyBpcyBhIDY0IGJ5dGUgc2VjcmV0IGtleSBmb3IgSFM1MTIgYWxnb3JpdGhtIGZvciBWZWhpY2xlIFJlc2N1ZSBKV1QgVG9rZW4h}
     access-token-validity-in-seconds: 3600
     refresh-token-validity-in-seconds: 86400

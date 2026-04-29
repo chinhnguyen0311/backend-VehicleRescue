@@ -25,7 +25,7 @@ import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
 import com.Doantotnghiep.vehicle_rescue.system.service.FcmTokenCacheService;
 import com.Doantotnghiep.vehicle_rescue.system.service.FirebaseStorageService;
 import com.Doantotnghiep.vehicle_rescue.system.service.NotificationService;
-import com.Doantotnghiep.vehicle_rescue.system.service.SmsService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -62,7 +62,6 @@ public class MechanicProfileService {
     private final ReviewRepository reviewRepository;
     private final ServiceRepository serviceRepository;
     private final MechanicSubscriptionRepository subscriptionRepository;
-    private final SmsService smsService;
     private final ReportRepository reportRepository;
     private final FirebaseStorageService storageService;
     @Autowired
