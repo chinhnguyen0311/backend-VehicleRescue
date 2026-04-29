@@ -1,5 +1,6 @@
 package com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response;
 
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicType;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicWorkType;
 import lombok.AllArgsConstructor;
@@ -24,4 +25,5 @@ public class ProfileResponseDTO {
     private String garageName;
     private String garageAddress;
     private String avatarUrl;
+    private MechanicStatus status;
 }

@@ -3,10 +3,13 @@ package com.Doantotnghiep.vehicle_rescue.system.service;
 import com.Doantotnghiep.vehicle_rescue.authentication.entity.Account;
 import com.Doantotnghiep.vehicle_rescue.authentication.enums.AccountStatus;
 import com.Doantotnghiep.vehicle_rescue.authentication.repository.AccountRepository;
+import com.Doantotnghiep.vehicle_rescue.authentication.util.SecurityUtil;
+import com.Doantotnghiep.vehicle_rescue.common.dto.PageResponse;
 import com.Doantotnghiep.vehicle_rescue.common.exception.CustomException;
 import com.Doantotnghiep.vehicle_rescue.common.exception.ErrorCode;
 import com.Doantotnghiep.vehicle_rescue.interation.entity.Review;
 import com.Doantotnghiep.vehicle_rescue.interation.repository.ReviewRepository;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.dto.response.MechanicOrderHistoryResponse;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.MechanicSubscription;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.RescueOrder;
@@ -25,6 +28,10 @@ import com.Doantotnghiep.vehicle_rescue.system.enums.ReportedByType;
 import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -45,6 +52,7 @@ public class AdminService {
     private final AccountRepository accountRepository;
     private final MechanicSubscriptionRepository subscriptionRepository;
     private final ReportRepository reportRepository;
+    private EmailService emailService;
     public AdminDashboardResponse getDashboard() {
 
         long totalCompleted = rescueOrderRepository.countByStatus(OrderStatus.COMPLETED);
@@ -198,6 +206,15 @@ public class AdminService {
                 )
                 .toList();
     }
+    public void banAccount(UUID mechanicId) {
+        Mechanic mechanic = mechanicRepository.findById(mechanicId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy mechanic"));
+        Account account = mechanic.getAccount();
+        account.setIsActive(false);
+        account.setStatus(AccountStatus.BANNED);
+        account.setBannedAt(LocalDateTime.now());
+        accountRepository.save(account);
+    }
     public List<PendingAccountResponse> getPendingAccounts() {
         return accountRepository.getPendingAccounts(AccountStatus.PENDING);
     }
@@ -223,6 +240,10 @@ public class AdminService {
         mechanic.setStatus(MechanicStatus.OFFLINE);
 
         mechanicRepository.save(mechanic);
+        emailService.sendAccountApprovalNotification(
+                account.getEmail(),
+                mechanic.getDisplayName()
+        );
     }
 
     public void rejectAccount(UUID accountId) {
@@ -232,7 +253,12 @@ public class AdminService {
         if (account.getStatus() != AccountStatus.PENDING) {
             throw new RuntimeException("Chỉ được xoá account PENDING");
         }
-
+        Mechanic mechanic = mechanicRepository.findByAccount(account)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+        emailService.sendAccountRejectionNotification(
+                account.getEmail(),
+                mechanic.getDisplayName()
+        );
         accountRepository.delete(account);
     }
 
@@ -248,7 +274,7 @@ public class AdminService {
         }
 
         Mechanic mechanic = sub.getMechanic();
-
+        Account account = mechanic.getAccount();
         mechanic.setSubsEndDate(sub.getNewEndDate());
         mechanic.setIsActiveSubs(true);
 
@@ -256,6 +282,11 @@ public class AdminService {
 
         mechanicRepository.save(mechanic);
         subscriptionRepository.save(sub);
+        emailService.sendSubscriptionRenewalNotification(
+                account.getEmail(),
+                mechanic.getDisplayName(),
+                sub.getNewEndDate()
+        );
     }
     public void rejectSubscription(UUID subscriptionId) {
 
@@ -342,6 +373,71 @@ public class AdminService {
                     .createdAt(r.getCreatedAt())
                     .build();
         }).toList();
+    }
+    public PageResponse<OrderHistoryResponse> getAllOrdersForAdmin(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<RescueOrder> orderPage = rescueOrderRepository.findAll(pageable);
+
+        List<OrderHistoryResponse> content = orderPage.getContent().stream().map(order -> {
+
+            // service name
+            String serviceName = "Không xác định";
+
+            if (order.getServiceId() != null) {
+                serviceName = serviceRepository.findById(order.getServiceId())
+                        .map(service -> service.getName())
+                        .orElse("Không tìm thấy dịch vụ");
+            }
+
+            // review
+            Integer rating = reviewRepository
+                    .findByOrderId(order.getOrderId())
+                    .map(Review::getRating)
+                    .orElse(null);
+
+            String review = reviewRepository
+                    .findByOrderId(order.getOrderId())
+                    .map(Review::getReview)
+                    .orElse(null);
+            String mechanicPhone;
+            mechanicPhone = mechanicRepository.findById(order.getMechanicId())
+                    .map(m -> m.getPhoneNumber())
+                    .orElse(null);
+            OffsetDateTime displayTime = switch (order.getStatus()) {
+                case REQUESTED -> order.getCreatedAt();
+                case COMPLETED -> order.getCompletedAt();
+                default -> order.getUpdatedAt();
+            };
+
+            return OrderHistoryResponse.builder()
+                    .orderId(order.getOrderId())
+                    .customerName(order.getCustomerName())
+                    .phone(order.getCustomerPhone())
+                    .serviceName(serviceName)
+                    .mechanicName(order.getMechanicName())
+                    .mechanicPhone(mechanicPhone)
+                    .status(order.getStatus().name())
+                    .address(order.getCustomerAddress())
+                    .completedAt(displayTime)
+                    .rating(rating)
+                    .review(review)
+                    .build();
+
+        }).toList();
+
+        return PageResponse.<OrderHistoryResponse>builder()
+                .content(content)
+                .page(orderPage.getNumber())
+                .size(orderPage.getSize())
+                .totalElements(orderPage.getTotalElements())
+                .totalPages(orderPage.getTotalPages())
+                .first(orderPage.isFirst())
+                .last(orderPage.isLast())
+                .empty(orderPage.isEmpty())
+                .numberOfElements(orderPage.getNumberOfElements())
+                .sorted(orderPage.getSort().isSorted())
+                .build();
     }
     private LocalDateTime toLocalDateTime(Object obj) {
         if (obj == null) return null;

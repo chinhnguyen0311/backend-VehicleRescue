@@ -2,6 +2,8 @@ package com.Doantotnghiep.vehicle_rescue.rescue_management.repository;
 
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.RescueOrder;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.OrderStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,8 +19,18 @@ public interface RescueOrderRepository extends JpaRepository<RescueOrder, UUID> 
     List<RescueOrder> findByMechanicIdAndStatus(UUID mechanicId, OrderStatus status);
     boolean existsByMechanicIdAndStatusIn(UUID mechanicId, List<OrderStatus> statuses);
     Optional<RescueOrder> findFirstByMechanicIdAndStatusIn(UUID mechanicId, List<OrderStatus> statuses);
-    @Query("SELECT r FROM RescueOrder r WHERE r.mechanicId = :mechanicId AND r.status = 'REQUESTED'")
-    List<RescueOrder> findRequestedByMechanicId(UUID mechanicId);
+    @Query("""
+SELECT r FROM RescueOrder r 
+WHERE r.mechanicId = :mechanicId 
+AND r.status = 'REQUESTED'
+AND r.createdAt BETWEEN :startOfDay AND :endOfDay
+ORDER BY r.createdAt DESC
+""")
+    List<RescueOrder> findTodayRequestedOrders(
+            UUID mechanicId,
+            OffsetDateTime startOfDay,
+            OffsetDateTime endOfDay
+    );
     long countByStatus(OrderStatus status);
     @Query("""
 SELECT o FROM RescueOrder o
@@ -62,4 +74,5 @@ WHERE r.status = 'COMPLETED'
 GROUP BY r.mechanicId
 """)
     List<Object[]> countCompletedOrders();
+    Page<RescueOrder> findAll(Pageable pageable);
 }

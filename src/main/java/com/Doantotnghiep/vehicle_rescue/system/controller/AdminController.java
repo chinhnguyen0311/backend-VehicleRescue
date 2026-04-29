@@ -1,6 +1,7 @@
 package com.Doantotnghiep.vehicle_rescue.system.controller;
 
 import com.Doantotnghiep.vehicle_rescue.common.dto.ApiResponse;
+import com.Doantotnghiep.vehicle_rescue.common.dto.PageResponse;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.SubscriptionStatus;
 import com.Doantotnghiep.vehicle_rescue.system.dto.response.*;
 import com.Doantotnghiep.vehicle_rescue.system.service.AdminService;
@@ -96,6 +97,27 @@ public class AdminController {
                 .code(200)
                 .message("Lấy danh sách báo cáo thành công")
                 .data(adminService.getAllReportsForAdmin())
+                .build();
+    }
+    @GetMapping("/orders-history")
+    public ApiResponse<PageResponse<OrderHistoryResponse>> getOrdersHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ApiResponse.<PageResponse<OrderHistoryResponse>>builder()
+                .success(true)
+                .code(200)
+                .message("Lấy lịch sử đơn hàng thành công")
+                .data(adminService.getAllOrdersForAdmin(page, size))
+                .build();
+    }
+    @PutMapping("/mechanics/{mechanicId}/ban")
+    public ApiResponse<Void> banAccount(@PathVariable UUID mechanicId) {
+        adminService.banAccount(mechanicId);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(200)
+                .message("Cấm vĩnh viễn tài khoản thành công")
                 .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.Doantotnghiep.vehicle_rescue.rescue_management.dto.request;
 
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,4 +30,5 @@ public class UpdateProfileRequestDTO {
     private String garageAddress;
     private Double garageLatitude;
     private Double garageLongitude;
+    private MechanicStatus status;
 }

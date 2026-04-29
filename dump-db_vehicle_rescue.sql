@@ -113,7 +113,7 @@ CREATE TABLE reviews (
 -- 9. Tạo bảng reports (Phụ thuộc rescue_orders)
 CREATE TABLE reports (
     report_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID NOT NULL,
+    order_id UUID,
     reported_by_type VARCHAR(50) NOT NULL,
     reporter_phone VARCHAR(20) NOT NULL,
     reason_category VARCHAR(100) NOT NULL,

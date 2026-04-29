@@ -85,6 +85,7 @@ public class MechanicProfileService {
                 .email(account.getEmail())
                 .phoneNumber(account.getPhoneNumber())
                 .avatarUrl(account.getAvatarUrl())
+                .status(mechanic.getStatus())
                 .type(mechanic.getType())
                 .workType(mechanic.getWorkType())
                 .subsEndDate(mechanic.getSubsEndDate());
@@ -118,12 +119,13 @@ public class MechanicProfileService {
         account.setPhoneNumber(request.getPhoneNumber());
         account.setEmail(request.getEmail());
         accountRepository.save(account);
-
+        if (request.getStatus() != null) {
+            mechanic.setStatus(request.getStatus());
+        }
         // Cập nhật Mechanic
         mechanic.setType(request.getType());
         mechanic.setDisplayName(request.getFullName());
         mechanic.setPhoneNumber(request.getPhoneNumber());
-
         // Nếu là GARAGE thì validate và cập nhật thông tin garage
         if (mechanic.getWorkType() == MechanicWorkType.GARAGE) {
             mechanic.setGarageName(request.getGarageName());
@@ -212,9 +214,20 @@ public class MechanicProfileService {
                         : mechanic.getCurrentLocation()
         );
 
-        List<RescueOrder> orders = rescueOrderRepository
-                .findByMechanicIdAndStatus(mechanic.getMechanicId(), OrderStatus.REQUESTED);
+        OffsetDateTime now = OffsetDateTime.now();
 
+        OffsetDateTime startOfDay = now.toLocalDate()
+                .atStartOfDay()
+                .atOffset(now.getOffset());
+
+        OffsetDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
+
+        List<RescueOrder> orders = rescueOrderRepository
+                .findTodayRequestedOrders(
+                        mechanic.getMechanicId(),
+                        startOfDay,
+                        endOfDay
+                );
         return orders.stream().map(order -> {
 
             Double cusLat = extractLat(order.getCustomerLocation());
@@ -768,6 +781,7 @@ public class MechanicProfileService {
             case SYSTEM -> {
 
                 targetPhone = null;
+
             }
             default -> throw new CustomException(ErrorCode.INVALID_REPORT_TARGET);
         }
