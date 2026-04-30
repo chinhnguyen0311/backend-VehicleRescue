@@ -26,8 +26,8 @@ import com.Doantotnghiep.vehicle_rescue.system.entity.Report;
 import com.Doantotnghiep.vehicle_rescue.system.enums.RelatedType;
 import com.Doantotnghiep.vehicle_rescue.system.enums.ReportedByType;
 import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +43,6 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class AdminService {
     private final RescueOrderRepository rescueOrderRepository;
     private final MechanicRepository mechanicRepository;
@@ -53,6 +52,24 @@ public class AdminService {
     private final MechanicSubscriptionRepository subscriptionRepository;
     private final ReportRepository reportRepository;
     private final EmailService emailService;
+
+    public AdminService(RescueOrderRepository rescueOrderRepository,
+                        MechanicRepository mechanicRepository,
+                        ServiceRepository serviceRepository,
+                        ReviewRepository reviewRepository,
+                        AccountRepository accountRepository,
+                        MechanicSubscriptionRepository subscriptionRepository,
+                        ReportRepository reportRepository,
+                        @Lazy EmailService emailService) {
+        this.rescueOrderRepository = rescueOrderRepository;
+        this.mechanicRepository = mechanicRepository;
+        this.serviceRepository = serviceRepository;
+        this.reviewRepository = reviewRepository;
+        this.accountRepository = accountRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.reportRepository = reportRepository;
+        this.emailService = emailService;
+    }
     public AdminDashboardResponse getDashboard() {
 
         long totalCompleted = rescueOrderRepository.countByStatus(OrderStatus.COMPLETED);
