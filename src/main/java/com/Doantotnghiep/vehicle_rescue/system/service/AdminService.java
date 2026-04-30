@@ -52,7 +52,7 @@ public class AdminService {
     private final AccountRepository accountRepository;
     private final MechanicSubscriptionRepository subscriptionRepository;
     private final ReportRepository reportRepository;
-    private EmailService emailService;
+    private final EmailService emailService;
     public AdminDashboardResponse getDashboard() {
 
         long totalCompleted = rescueOrderRepository.countByStatus(OrderStatus.COMPLETED);
