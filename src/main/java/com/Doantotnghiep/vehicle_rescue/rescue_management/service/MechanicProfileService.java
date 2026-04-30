@@ -25,7 +25,6 @@ import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
 import com.Doantotnghiep.vehicle_rescue.system.service.FcmTokenCacheService;
 import com.Doantotnghiep.vehicle_rescue.system.service.FirebaseStorageService;
 import com.Doantotnghiep.vehicle_rescue.system.service.NotificationService;
-import com.Doantotnghiep.vehicle_rescue.system.service.SmsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -62,14 +61,10 @@ public class MechanicProfileService {
     private final ReviewRepository reviewRepository;
     private final ServiceRepository serviceRepository;
     private final MechanicSubscriptionRepository subscriptionRepository;
-    private final SmsService smsService;
     private final ReportRepository reportRepository;
     private final FirebaseStorageService storageService;
-    @Autowired
-    private FcmTokenCacheService tokenCacheService;
-
-    @Autowired
-    private NotificationService notificationService;
+    private final FcmTokenCacheService tokenCacheService;
+    private final NotificationService notificationService;
     public ProfileResponseDTO getProfile() {
         String username = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
@@ -716,7 +711,7 @@ public class MechanicProfileService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         String fileUrl;
         try {
-           fileUrl = storageService.uploadFile(billImage);
+            fileUrl = storageService.uploadFile(billImage);
         } catch (IOException e) {
             throw new RuntimeException("Lỗi upload ảnh: " + e.getMessage());
         }
