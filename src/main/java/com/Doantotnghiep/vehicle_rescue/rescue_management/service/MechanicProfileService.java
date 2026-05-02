@@ -665,10 +665,10 @@ public class MechanicProfileService {
     }
     public MechanicDetailResponse getMechanicDetail(UUID mechanicId) {
 
-        Mechanic mechanic = mechanicRepository.findById(mechanicId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+            Mechanic mechanic = mechanicRepository.findById(mechanicId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
 
-        // 🔹 Lấy tên
+            // 🔹 Lấy tên
         String mechanicName = mechanic.getWorkType().name().equals("GARAGE")
                 ? mechanic.getGarageName()
                 : mechanic.getDisplayName();
@@ -692,7 +692,16 @@ public class MechanicProfileService {
         if (mechanic.getWorkType().name().equals("GARAGE")) {
             address = mechanic.getGarageAddress();
         }
-
+        List<MechanicDetailResponse.ReviewSummary> recentReviews = reviewRepository
+                .findTop3RecentWithComment(mechanicId)
+                .stream()
+                .map(r -> MechanicDetailResponse.ReviewSummary.builder()
+                        .customerName(r.getOrder().getCustomerName()) // chỉnh field tùy entity
+                        .rating(r.getRating())
+                        .review(r.getReview())
+                        .createdAt(r.getCreatedAt())
+                        .build())
+                .toList();
         return MechanicDetailResponse.builder()
                 .mechanicName(mechanicName)
                 .mechanicPhone(mechanic.getPhoneNumber())
@@ -702,6 +711,7 @@ public class MechanicProfileService {
                 .type(mechanic.getType().name())
                 .workType(mechanic.getWorkType().name())
                 .address(address)
+                .recentReviews(recentReviews)
                 .build();
     }
     public void requestRenewal(MultipartFile billImage) {

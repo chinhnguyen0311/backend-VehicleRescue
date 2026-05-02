@@ -64,4 +64,15 @@ FROM Review r
 WHERE r.mechanic.mechanicId = :mechanicId
 """)
     List<Object[]> getReviewStats(@Param("mechanicId") UUID mechanicId);
+
+    @Query("""
+SELECT r
+FROM Review r
+WHERE r.mechanic.mechanicId = :mechanicId
+  AND r.review IS NOT NULL
+  AND r.review <> ''
+ORDER BY r.createdAt DESC
+LIMIT 3
+""")
+    List<Review> findTop3RecentWithComment(@Param("mechanicId") UUID mechanicId);
 }
