@@ -21,5 +21,6 @@ public class MechanicOrderItemResponse {
     private Double longitude;
     private Double distance;
     private String address;
+    private String status;
     private OffsetDateTime createdAt;
 }

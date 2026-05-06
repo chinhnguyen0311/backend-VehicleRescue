@@ -253,6 +253,7 @@ public class MechanicProfileService {
                     .longitude(cusLng)
                     .distance(distance)
                     .address(address)
+                    .status(order.getStatus().toString())
                     .createdAt(order.getCreatedAt())
                     .build();
 
@@ -439,8 +440,8 @@ public class MechanicProfileService {
                 .findFirstByMechanicIdAndStatusIn(
                         mechanic.getMechanicId(),
                         List.of(OrderStatus.ACCEPTED, OrderStatus.IN_PROGRESS)
-                );
-
+                ).filter(order -> order.getCreatedAt()
+                        .isAfter(OffsetDateTime.now().minusHours(24)));;
 
         if (optionalOrder.isEmpty()) {
             return null;
@@ -485,6 +486,7 @@ public class MechanicProfileService {
                 .longitude(cusLng)
                 .distance(distance)
                 .address(address)
+                .status(order.getStatus().toString())
                 .createdAt(order.getCreatedAt())
                 .build();
     }

@@ -276,6 +276,7 @@ public class AdminService {
                 account.getEmail(),
                 mechanic.getDisplayName()
         );
+        mechanicRepository.delete(mechanic);
         accountRepository.delete(account);
     }
 

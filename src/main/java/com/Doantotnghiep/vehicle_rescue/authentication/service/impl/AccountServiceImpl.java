@@ -61,11 +61,13 @@ public class AccountServiceImpl implements AccountService {
         if (accountRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new CustomException(ErrorCode.PHONE_NUMBER_ALREADY_EXISTS);
         }
-        String fileUrl;
-        try {
-            fileUrl = storageService.uploadFile(fileImage);
-        } catch (IOException e) {
-            throw new RuntimeException("Lỗi upload ảnh: " + e.getMessage());
+        String fileUrl=null;
+        if (fileImage!= null){
+            try {
+                fileUrl = storageService.uploadFile(fileImage);
+            } catch (IOException e) {
+                throw new RuntimeException("Lỗi upload ảnh: " + e.getMessage());
+            }
         }
         Account account = Account.builder()
                 .username(request.getUsername())
