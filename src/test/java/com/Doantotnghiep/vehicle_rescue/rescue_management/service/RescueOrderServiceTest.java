@@ -33,7 +33,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -80,23 +80,32 @@ public class RescueOrderServiceTest {
         return o;
     }
 
-    // ─── Object[] row helper: index mapping in searchNearbyMechanics ──────────
-    // row[0]=mechanicId, [1]=type, [2]=displayName, [3]=phone,
-    // [4]=currentLocation, [5]=garageName, [6]=garageLocation,
-    // [7]=workType, [8]=ratingScore, [9]=avatarUrl, [last]=distance
+    // ─── Object[] row helper ──────────────────────────────────────────────────
+    // extractLat/Lng kiểm tra instanceof jts.Point → phải truyền Point thật.
+    // Nếu lat/lng null thì filter loại ra khỏi topList → result rỗng.
+    private static final org.locationtech.jts.geom.GeometryFactory GF =
+            new org.locationtech.jts.geom.GeometryFactory(
+                    new org.locationtech.jts.geom.PrecisionModel(), 4326);
+
+    private org.locationtech.jts.geom.Point makePoint(double lat, double lng) {
+        return GF.createPoint(new org.locationtech.jts.geom.Coordinate(lng, lat));
+    }
+
     private Object[] buildRow(UUID mechanicId, String workType, Double distance) {
+        org.locationtech.jts.geom.Point mobilePoint = makePoint(21.0, 105.0);
+        org.locationtech.jts.geom.Point garagePoint  = makePoint(21.1, 105.1);
         return new Object[]{
-                mechanicId.toString(),   // [0] mechanicId
-                "MOTORBIKE",              // [1] type
-                "Nguyen Van A",         // [2] displayName (MOBILE)
-                "0911111111",           // [3] phone
-                null,                   // [4] currentLocation (MOBILE)
-                "Garage ABC",           // [5] garageName (GARAGE)
-                null,                   // [6] garageLocation (GARAGE)
-                workType,               // [7] workType
-                "4.5",                  // [8] ratingScore
-                "http://avatar.url",    // [9] avatarUrl
-                distance                // [10] distance
+                mechanicId.toString(),                               // [0] mechanicId
+                "MOTORBIKE",                                         // [1] type
+                "Nguyen Van A",                                      // [2] displayName (MOBILE)
+                "0911111111",                                        // [3] phone
+                workType.equals("MOBILE") ? mobilePoint : null,     // [4] currentLocation
+                "Garage ABC",                                        // [5] garageName (GARAGE)
+                workType.equals("GARAGE") ? garagePoint : null,     // [6] garageLocation
+                workType,                                            // [7] workType
+                "4.5",                                               // [8] ratingScore
+                "http://avatar.url",                                 // [9] avatarUrl
+                distance                                             // [10] distance
         };
     }
 
@@ -136,14 +145,14 @@ public class RescueOrderServiceTest {
     @Test
     void searchNearbyMechanics_noResults_returnsEmpty() {
         SearchMechanicRequestDTO request = buildSearchRequest();
-        when(mechanicRepository.findNearbyMechanics(any(), any(), any(), any(), any()))
+        when(mechanicRepository.findNearbyMechanics(anyDouble(), anyDouble(), any(), any(), any()))
                 .thenReturn(List.of());
 
         List<MechanicSearchResultDTO> result = service.searchNearbyMechanics(request);
 
         assertTrue(result.isEmpty());
         // topList rỗng → không gọi ORS
-        verify(distanceService, never()).getRealDistances(any(), any(), any());
+        verify(distanceService, never()).getRealDistances(anyDouble(), anyDouble(), any());
     }
 
     @Test
@@ -153,7 +162,7 @@ public class RescueOrderServiceTest {
 
         Object[] row = buildRow(mechanicId, "MOBILE", 1.2);
 
-        when(mechanicRepository.findNearbyMechanics(any(), any(), any(), any(), any()))
+        when(mechanicRepository.findNearbyMechanics(anyDouble(), anyDouble(), any(), any(), any()))
                 .thenReturn(Collections.singletonList(row)); // ✅ FIX
 
         when(mechanicServiceRepository.findServicesByMechanicId(mechanicId))
@@ -162,7 +171,7 @@ public class RescueOrderServiceTest {
         when(rescueOrderRepository.countByMechanicIdAndStatus(mechanicId, OrderStatus.COMPLETED))
                 .thenReturn(5);
 
-        when(distanceService.getRealDistances(any(), any(), any()))
+        when(distanceService.getRealDistances(anyDouble(), anyDouble(), any()))
                 .thenReturn(List.of(2.5));
 
         List<MechanicSearchResultDTO> result = service.searchNearbyMechanics(request);
@@ -172,7 +181,7 @@ public class RescueOrderServiceTest {
         assertEquals("Nguyen Van A", result.get(0).getDisplayName());
         assertEquals(2.5, result.get(0).getDistance());
 
-        verify(distanceService).getRealDistances(any(), any(), any());
+        verify(distanceService).getRealDistances(anyDouble(), anyDouble(), any());
     }
 
     @Test
@@ -182,7 +191,7 @@ public class RescueOrderServiceTest {
 
         Object[] row = buildRow(mechanicId, "GARAGE", 0.8);
 
-        when(mechanicRepository.findNearbyMechanics(any(), any(), any(), any(), any()))
+        when(mechanicRepository.findNearbyMechanics(anyDouble(), anyDouble(), any(), any(), any()))
                 .thenReturn(Collections.singletonList(row)); // ✅ FIX
 
         when(mechanicServiceRepository.findServicesByMechanicId(mechanicId))
@@ -191,7 +200,7 @@ public class RescueOrderServiceTest {
         when(rescueOrderRepository.countByMechanicIdAndStatus(mechanicId, OrderStatus.COMPLETED))
                 .thenReturn(0);
 
-        when(distanceService.getRealDistances(any(), any(), any()))
+        when(distanceService.getRealDistances(anyDouble(), anyDouble(), any()))
                 .thenReturn(List.of(0.8));
 
         List<MechanicSearchResultDTO> result = service.searchNearbyMechanics(request);
@@ -204,30 +213,34 @@ public class RescueOrderServiceTest {
         UUID mechanicId = UUID.randomUUID();
         SearchMechanicRequestDTO request = buildSearchRequest();
 
+        // Tạo Point thật cho MOBILE để không bị filter
+        org.locationtech.jts.geom.Point mobilePoint = GF.createPoint(
+                new org.locationtech.jts.geom.Coordinate(105.0, 21.0));
+
         Object[] row = new Object[]{
-                mechanicId.toString(),
-                "GENERAL",
-                "Ten A",
-                "0911",
-                null,        // ratingScore
-                "Garage",
-                null,        // avatarUrl
-                "MOBILE",
-                null,
-                null,
-                1.0
+                mechanicId.toString(),  // [0] mechanicId
+                "GENERAL",              // [1] type
+                "Ten A",               // [2] displayName
+                "0911",                // [3] phone
+                mobilePoint,           // [4] currentLocation (MOBILE) — không null để qua filter
+                "Garage",              // [5] garageName
+                null,                  // [6] garageLocation
+                "MOBILE",              // [7] workType
+                null,                  // [8] ratingScore — null → BigDecimal.ZERO
+                null,                  // [9] avatarUrl   — null → null
+                1.0                    // [10] distance
         };
 
-        when(mechanicRepository.findNearbyMechanics(any(), any(), any(), any(), any()))
+        when(mechanicRepository.findNearbyMechanics(anyDouble(), anyDouble(), any(), any(), any()))
                 .thenReturn(Collections.singletonList(row)); // ✅ FIX
 
         when(mechanicServiceRepository.findServicesByMechanicId(mechanicId))
                 .thenReturn(Collections.emptyList());
 
-        when(rescueOrderRepository.countByMechanicIdAndStatus(any(), any()))
+        when(rescueOrderRepository.countByMechanicIdAndStatus(any(UUID.class), eq(OrderStatus.COMPLETED)))
                 .thenReturn(0);
 
-        when(distanceService.getRealDistances(any(), any(), any()))
+        when(distanceService.getRealDistances(anyDouble(), anyDouble(), any()))
                 .thenReturn(List.of(1.0));
 
         List<MechanicSearchResultDTO> result = service.searchNearbyMechanics(request);
@@ -249,20 +262,20 @@ public class RescueOrderServiceTest {
             rows.add(buildRow(id, "MOBILE", (double) i));
         }
 
-        when(mechanicRepository.findNearbyMechanics(any(), any(), any(), any(), any()))
+        when(mechanicRepository.findNearbyMechanics(anyDouble(), anyDouble(), any(), any(), any()))
                 .thenReturn(rows);
         for (UUID id : ids) {
             when(mechanicServiceRepository.findServicesByMechanicId(id)).thenReturn(List.of());
             when(rescueOrderRepository.countByMechanicIdAndStatus(id, OrderStatus.COMPLETED)).thenReturn(0);
         }
-        when(distanceService.getRealDistances(any(), any(), any()))
+        when(distanceService.getRealDistances(anyDouble(), anyDouble(), any()))
                 .thenReturn(List.of(1.0, 2.0, 3.0, 4.0, 5.0));
 
         List<MechanicSearchResultDTO> result = service.searchNearbyMechanics(request);
 
         // chỉ lấy tối đa 5
         assertEquals(5, result.size());
-        verify(distanceService).getRealDistances(any(), any(), any());
+        verify(distanceService).getRealDistances(anyDouble(), anyDouble(), any());
     }
 
     @Test
@@ -272,12 +285,12 @@ public class RescueOrderServiceTest {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
 
-        when(mechanicRepository.findNearbyMechanics(any(), any(), any(), any(), any()))
+        when(mechanicRepository.findNearbyMechanics(anyDouble(), anyDouble(), any(), any(), any()))
                 .thenReturn(List.of(buildRow(id1, "MOBILE", 5.0), buildRow(id2, "MOBILE", 1.0)));
         when(mechanicServiceRepository.findServicesByMechanicId(any())).thenReturn(List.of());
-        when(rescueOrderRepository.countByMechanicIdAndStatus(any(), any())).thenReturn(0);
+        when(rescueOrderRepository.countByMechanicIdAndStatus(any(UUID.class), eq(OrderStatus.COMPLETED))).thenReturn(0);
         // ORS trả về khoảng cách thật: id1=5.0, id2=1.0
-        when(distanceService.getRealDistances(any(), any(), any()))
+        when(distanceService.getRealDistances(anyDouble(), anyDouble(), any()))
                 .thenReturn(List.of(5.0, 1.0));
 
         List<MechanicSearchResultDTO> result = service.searchNearbyMechanics(request);
@@ -307,7 +320,7 @@ public class RescueOrderServiceTest {
         RescueOrderResponse response = new RescueOrderResponse();
 
         when(mechanicRepository.findById(mechanic.getMechanicId())).thenReturn(Optional.of(mechanic));
-        when(distanceService.getAddress(any(), any())).thenReturn("Hà Nội");
+        when(distanceService.getAddress(anyDouble(), anyDouble())).thenReturn("Hà Nội");
         when(rescueOrderRepository.save(any())).thenReturn(saved);
         when(serviceRepository.findById(serviceId)).thenReturn(Optional.of(svc));
         when(rescueOrderMapper.toResponse(saved)).thenReturn(response);
@@ -329,7 +342,7 @@ public class RescueOrderServiceTest {
 
         RescueOrder saved = buildOrder(OrderStatus.REQUESTED);
         when(mechanicRepository.findById(mechanic.getMechanicId())).thenReturn(Optional.of(mechanic));
-        when(distanceService.getAddress(any(), any())).thenReturn("TP HCM");
+        when(distanceService.getAddress(anyDouble(), anyDouble())).thenReturn("TP HCM");
         when(rescueOrderRepository.save(any())).thenReturn(saved);
         when(rescueOrderMapper.toResponse(saved)).thenReturn(new RescueOrderResponse());
 
@@ -349,7 +362,7 @@ public class RescueOrderServiceTest {
 
         RescueOrder saved = buildOrder(OrderStatus.REQUESTED);
         when(mechanicRepository.findById(mechanic.getMechanicId())).thenReturn(Optional.of(mechanic));
-        when(distanceService.getAddress(any(), any())).thenReturn("Hà Nội");
+        when(distanceService.getAddress(anyDouble(), anyDouble())).thenReturn("Hà Nội");
         when(rescueOrderRepository.save(any())).thenReturn(saved);
         when(rescueOrderMapper.toResponse(saved)).thenReturn(new RescueOrderResponse());
 
@@ -369,7 +382,7 @@ public class RescueOrderServiceTest {
                 mechanic.getMechanicId(), "0911111111", null);
 
         when(mechanicRepository.findById(mechanic.getMechanicId())).thenReturn(Optional.of(mechanic));
-        when(distanceService.getAddress(any(), any())).thenReturn("Hà Nội");
+        when(distanceService.getAddress(anyDouble(), anyDouble())).thenReturn("Hà Nội");
 
         assertThrows(RuntimeException.class, () -> service.createRescueOrder(request));
         verify(rescueOrderRepository, never()).save(any());
@@ -380,7 +393,7 @@ public class RescueOrderServiceTest {
         CreateRescueOrderRequest request = buildOrderRequest(UUID.randomUUID(), "0900000001", null);
 
         when(mechanicRepository.findById(any())).thenReturn(Optional.empty());
-        when(distanceService.getAddress(any(), any())).thenReturn("Hà Nội");
+        when(distanceService.getAddress(anyDouble(), anyDouble())).thenReturn("Hà Nội");
 
         assertThrows(RuntimeException.class, () -> service.createRescueOrder(request));
     }

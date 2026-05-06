@@ -44,7 +44,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc</artifactId>
+			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.nimbusds</groupId>
@@ -70,11 +70,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -120,6 +115,11 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-test-autoconfigure</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -159,6 +159,14 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.11</version>
+				<configuration>
+					<excludes>
+						<exclude>com/Doantotnghiep/vehicle_rescue/**/dto/**</exclude>
+						<exclude>com/Doantotnghiep/vehicle_rescue/**/entity/**</exclude>
+						<exclude>com/Doantotnghiep/vehicle_rescue/**/exception/**</exclude>
+						<exclude>com/Doantotnghiep/vehicle_rescue/**/enums/**</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 
 					<!-- Bật JaCoCo -->
