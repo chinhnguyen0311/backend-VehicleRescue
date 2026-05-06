@@ -25,6 +25,7 @@ import com.Doantotnghiep.vehicle_rescue.system.repository.ReportRepository;
 import com.Doantotnghiep.vehicle_rescue.system.service.FcmTokenCacheService;
 import com.Doantotnghiep.vehicle_rescue.system.service.FirebaseStorageService;
 import com.Doantotnghiep.vehicle_rescue.system.service.NotificationService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -249,6 +250,7 @@ public class MechanicProfileService {
                     .longitude(cusLng)
                     .distance(distance)
                     .address(address)
+                    .status(order.getStatus().toString())
                     .createdAt(order.getCreatedAt())
                     .build();
 
@@ -435,8 +437,8 @@ public class MechanicProfileService {
                 .findFirstByMechanicIdAndStatusIn(
                         mechanic.getMechanicId(),
                         List.of(OrderStatus.ACCEPTED, OrderStatus.IN_PROGRESS)
-                );
-
+                ).filter(order -> order.getCreatedAt()
+                        .isAfter(OffsetDateTime.now().minusHours(24)));;
 
         if (optionalOrder.isEmpty()) {
             return null;
@@ -481,6 +483,7 @@ public class MechanicProfileService {
                 .longitude(cusLng)
                 .distance(distance)
                 .address(address)
+                .status(order.getStatus().toString())
                 .createdAt(order.getCreatedAt())
                 .build();
     }
@@ -661,10 +664,10 @@ public class MechanicProfileService {
     }
     public MechanicDetailResponse getMechanicDetail(UUID mechanicId) {
 
-        Mechanic mechanic = mechanicRepository.findById(mechanicId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+            Mechanic mechanic = mechanicRepository.findById(mechanicId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
 
-        // 🔹 Lấy tên
+            // 🔹 Lấy tên
         String mechanicName = mechanic.getWorkType().name().equals("GARAGE")
                 ? mechanic.getGarageName()
                 : mechanic.getDisplayName();
@@ -688,7 +691,16 @@ public class MechanicProfileService {
         if (mechanic.getWorkType().name().equals("GARAGE")) {
             address = mechanic.getGarageAddress();
         }
-
+        List<MechanicDetailResponse.ReviewSummary> recentReviews = reviewRepository
+                .findTop3RecentWithComment(mechanicId)
+                .stream()
+                .map(r -> MechanicDetailResponse.ReviewSummary.builder()
+                        .customerName(r.getOrder().getCustomerName()) // chỉnh field tùy entity
+                        .rating(r.getRating())
+                        .review(r.getReview())
+                        .createdAt(r.getCreatedAt())
+                        .build())
+                .toList();
         return MechanicDetailResponse.builder()
                 .mechanicName(mechanicName)
                 .mechanicPhone(mechanic.getPhoneNumber())
@@ -698,6 +710,7 @@ public class MechanicProfileService {
                 .type(mechanic.getType().name())
                 .workType(mechanic.getWorkType().name())
                 .address(address)
+                .recentReviews(recentReviews)
                 .build();
     }
     public void requestRenewal(MultipartFile billImage) {

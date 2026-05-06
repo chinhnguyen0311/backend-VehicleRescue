@@ -29,7 +29,7 @@ public class AuthController {
     @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> register(
             @ModelAttribute @Valid RegisterRequest request,
-            @RequestPart("file") MultipartFile fileImage) {
+            @RequestPart(value = "file", required = false) MultipartFile fileImage) {
         String response = authService.register(request, fileImage);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

@@ -10,6 +10,8 @@ import com.Doantotnghiep.vehicle_rescue.authentication.service.AccountService;
 import com.Doantotnghiep.vehicle_rescue.authentication.util.SecurityUtil;
 import com.Doantotnghiep.vehicle_rescue.common.exception.CustomException;
 import com.Doantotnghiep.vehicle_rescue.common.exception.ErrorCode;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +39,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
     private final SecurityUtil securityUtil;
     private final AccountService accountService;
-
+    private final MechanicRepository mechanicRepository;
     @Override
     public String register(RegisterRequest registerRequest, MultipartFile fileImage) {
         return accountService.registerAccount(registerRequest, fileImage);
@@ -90,6 +95,19 @@ public class AuthServiceImpl implements AuthService {
             else {
                 log.warn("Login attempt for inactive account: {}", account.getUsername());
                 throw new CustomException(ErrorCode.ACCOUNT_NOT_ACTIVE);
+            }
+        }
+        Optional<Mechanic> mechanicOpt = mechanicRepository.findByAccount(account);
+        if (mechanicOpt.isPresent()) {
+            Mechanic mechanic = mechanicOpt.get();
+            if (mechanic.getSubsEndDate() != null && mechanic.getIsActiveSubs() != null && mechanic.getIsActiveSubs()) {
+                LocalDateTime now = LocalDateTime.now();
+                if (mechanic.getSubsEndDate() != null
+                        && Boolean.TRUE.equals(mechanic.getIsActiveSubs())
+                        && OffsetDateTime.now().isAfter(mechanic.getSubsEndDate())) {
+                    mechanic.setIsActiveSubs(false);
+                    mechanicRepository.save(mechanic);
+                }
             }
         }
 
