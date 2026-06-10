@@ -11,6 +11,7 @@ import com.Doantotnghiep.vehicle_rescue.authentication.util.SecurityUtil;
 import com.Doantotnghiep.vehicle_rescue.common.exception.CustomException;
 import com.Doantotnghiep.vehicle_rescue.common.exception.ErrorCode;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.entity.Mechanic;
+import com.Doantotnghiep.vehicle_rescue.rescue_management.enums.MechanicStatus;
 import com.Doantotnghiep.vehicle_rescue.rescue_management.repository.MechanicRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -100,15 +101,29 @@ public class AuthServiceImpl implements AuthService {
         Optional<Mechanic> mechanicOpt = mechanicRepository.findByAccount(account);
         if (mechanicOpt.isPresent()) {
             Mechanic mechanic = mechanicOpt.get();
-            if (mechanic.getSubsEndDate() != null && mechanic.getIsActiveSubs() != null && mechanic.getIsActiveSubs()) {
-                LocalDateTime now = LocalDateTime.now();
-                if (mechanic.getSubsEndDate() != null
-                        && Boolean.TRUE.equals(mechanic.getIsActiveSubs())
-                        && OffsetDateTime.now().isAfter(mechanic.getSubsEndDate())) {
-                    mechanic.setIsActiveSubs(false);
-                    mechanicRepository.save(mechanic);
+
+            // Check subscription expiry
+            if (mechanic.getSubsEndDate() != null
+                    && Boolean.TRUE.equals(mechanic.getIsActiveSubs())
+                    && OffsetDateTime.now().isAfter(mechanic.getSubsEndDate())) {
+                mechanic.setIsActiveSubs(false);
+            }
+
+            // Nếu lastActive cách hiện tại >= 6 tiếng và status đang là BUSY → chuyển về ONLINE
+            if (mechanic.getStatus() != null
+                    && mechanic.getStatus().name().equals("BUSY")
+                    && account.getLastActive() != null) {
+                long hoursSinceActive = java.time.Duration.between(
+                        account.getLastActive(), LocalDateTime.now()
+                ).toHours();
+                if (hoursSinceActive >= 6) {
+                    log.info("Auto-resetting mechanic {} status from BUSY to ONLINE (inactive for {} hours)",
+                            account.getUsername(), hoursSinceActive);
+                    mechanic.setStatus(MechanicStatus.ONLINE); // hoặc enum tương ứng của bạn
                 }
             }
+
+            mechanicRepository.save(mechanic);
         }
 
         // Update last active
