@@ -109,16 +109,16 @@ public class RescueOrderService {
                         .toList()
         );
         if (topList.isEmpty()) {
-            return Collections.emptyList(); // 👈 trả về luôn, không gọi ORS
+            return Collections.emptyList(); // trả về luôn, không gọi ORS
         }
-// 🔥 gọi ORS lấy distance thật
+//  gọi ORS lấy distance thật
         List<Double> realDistances = distanceService.getRealDistances(
                 request.getLatitude(),
                 request.getLongitude(),
                 topList
         );
 
-// 🔥 gán lại distance
+//  gán lại distance
         for (int i = 0; i < topList.size(); i++) {
             topList.get(i).setDistance(realDistances.get(i));
         }
